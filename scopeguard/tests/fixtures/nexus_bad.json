@@ -1,0 +1,151 @@
+{
+  "_comment": "This fixture represents a badly constructed student-generated scope document. It contains the specific errors the spec calls out: CIDR/subnet mismatch, VLAN count error, missing maintenance window for a technique that needs one, and unsigned-but-executed status. Additional errors test other rules.",
+
+  "identity": {
+    "engagement_id": "NEXUS-2026-PT-001",
+    "sow_reference": "TEST-SOW-001",
+    "msa_reference": null,
+    "client_org_legal_name": "Nexus Plaza LLC",
+    "testing_firm_legal_name": "Test Firm Inc.",
+    "engagement_type": "full_scope",
+    "classification": "confidential",
+    "regulatory_basis": ["PCI-DSS"],
+    "document_version": "1.0",
+    "document_status": "executed",
+    "prepared_by": "Test Firm Inc.",
+    "prepared_date": "2026-03-17",
+    "schema_version": "1.0",
+    "client_signatory_name": null,
+    "client_signatory_date": null,
+    "tester_lead_signatory_name": null,
+    "tester_lead_signatory_date": null,
+    "tester_principal_signatory_name": null,
+    "tester_principal_signatory_date": null
+  },
+
+  "period": {
+    "authorized_start_date": "2026-04-07T08:00:00-04:00",
+    "authorized_end_date": "2026-04-25T17:00:00-04:00",
+    "active_testing_days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+    "active_testing_hours_start": "08:00 ET",
+    "active_testing_hours_end": "18:00 ET",
+    "blackout_dates": [],
+    "retest_included": false,
+    "report_draft_due": "2026-05-02",
+    "report_final_due": "2026-05-09"
+  },
+
+  "contacts": [
+    {
+      "role": "authorizing_executive",
+      "full_name": "Jane Smith",
+      "title": "CISO",
+      "organization": "Nexus Plaza LLC",
+      "phone_primary": "(555) 123-4567",
+      "phone_mobile": "(555) 123-9999",
+      "email": "jane.smith@nexusplaza.com",
+      "certifications": [],
+      "authorized_source_ips": []
+    },
+    {
+      "role": "primary_technical_contact",
+      "full_name": "Bob Jones",
+      "title": "IT Manager",
+      "organization": "Nexus Plaza LLC",
+      "phone_primary": "(555) 123-4568",
+      "phone_mobile": null,
+      "email": "bob.jones@nexusplaza.com",
+      "certifications": [],
+      "authorized_source_ips": []
+    },
+    {
+      "role": "engagement_lead",
+      "full_name": "Alice Tester",
+      "title": "Penetration Tester",
+      "organization": "Test Firm Inc.",
+      "phone_primary": "(555) 987-6543",
+      "phone_mobile": "(555) 987-0000",
+      "email": "NOT-A-VALID-EMAIL",
+      "certifications": ["OSCP"],
+      "authorized_source_ips": ["999.999.999.999"]
+    }
+  ],
+
+  "in_scope_assets": [
+    {
+      "_comment_error": "VAL-001 + VAL-002: /21 prefix yields mask 255.255.248.0, but 255.255.255.0 is stated",
+      "asset_name": "Office Network",
+      "cidr_notation": "192.168.1.0/21",
+      "subnet_mask": "255.255.255.0",
+      "vlan_range_start": 10,
+      "vlan_range_end": 12,
+      "vlan_count_stated": 5,
+      "_comment_error2": "VAL-003: range 10-12 = 3 VLANs but 5 is stated",
+      "description": "Office network segment",
+      "delivery_method": "network_discoverable"
+    },
+    {
+      "asset_name": "Web Server",
+      "cidr_notation": "10.0.1.0/24",
+      "subnet_mask": "255.255.255.0",
+      "description": "Public-facing web server",
+      "delivery_method": "client_provisioned",
+      "delivery_confirmed": false
+    }
+  ],
+
+  "out_of_scope_assets": [],
+
+  "physical_locations": [],
+
+  "techniques": [
+    {
+      "_comment_error": "VAL-009: conditional with vague conditions text and no approval_workflow",
+      "technique_id": "TECH-EXPLOIT-001",
+      "category": "exploitation",
+      "technique_name": "Remote exploitation",
+      "authorization_status": "conditional",
+      "conditions": "Only if absolutely necessary",
+      "approval_workflow": null,
+      "maintenance_window_required": false,
+      "notification_required": false,
+      "prohibited": false
+    },
+    {
+      "_comment_error": "VAL-010 + XRF-004: requires maintenance window but none defined",
+      "technique_id": "TECH-DOS-001",
+      "category": "dos",
+      "technique_name": "Application-layer DoS",
+      "authorization_status": "conditional",
+      "conditions": "Must be performed during a defined maintenance window with Client Technical Contact on call. Duration limit: 30 minutes. Written confirmation required before starting.",
+      "approval_workflow": "Client Technical Contact provides written confirmation via email before window starts.",
+      "maintenance_window_required": true,
+      "maintenance_window_ref": "MW-NONEXISTENT",
+      "notification_required": true,
+      "notification_lead_time_hours": 4,
+      "notification_recipient_ref": "primary_technical_contact",
+      "prohibited": false
+    }
+  ],
+
+  "maintenance_windows": [],
+
+  "data_governance": {
+    "_comment_error": "VAL-011: 8 hours exceeds the 4-hour maximum",
+    "credential_reporting_window_hours": 8,
+    "_comment_error2": "VAL-012: third_party_disclosure_prohibited must be true",
+    "credential_use_policy": "minimal_demonstration",
+    "pii_handling_policy": "We will handle PII appropriately.",
+    "_comment_error3": "Min length violation: above is under 50 chars — implementation should flag",
+    "evidence_encryption_standard": "AES-256",
+    "evidence_retention_days": 30,
+    "evidence_deletion_confirmation": true,
+    "data_transfer_method": "Email",
+    "third_party_disclosure_prohibited": false,
+    "cloud_storage_prohibited": true,
+    "personal_device_prohibited": true,
+    "hash_retention_policy": "Hashes deleted at end of engagement."
+  },
+
+  "social_engineering": null
+}

@@ -1,0 +1,298 @@
+group: assets
+version: "1.0"
+description: In-scope networks, out-of-scope exclusions, and physical locations
+
+in_scope_network_fields:
+  asset_name:
+    type: string
+    required: true
+    description: "Descriptive name for this network segment, VLAN, or device group."
+
+  device_type:
+    type: enum
+    required: true
+    values:
+      - network_segment
+      - vlan
+      - firewall
+      - next_gen_firewall
+      - ids_ips
+      - router
+      - switch
+      - hub
+      - vpn_gateway
+      - application_server
+      - file_server
+      - database_server
+      - web_server
+      - workstation
+      - laptop
+      - tablet
+      - phone_voip
+      - printer
+      - smart_appliance
+      - iot_device
+      - television
+      - wireless_ap
+      - load_balancer
+      - storage_array
+      - other
+    description: "Device or segment classification. Drives required sub-fields."
+
+  vlan_id:
+    type: integer
+    required: false
+    min: 1
+    max: 4094
+    description: "VLAN ID (1-4094). Use when device_type is vlan or for a specific VLAN. Devices within this VLAN are documented as endpoints below."
+
+  vlan_range_start:
+    type: integer
+    required: false
+    min: 1
+    max: 4094
+    description: "First VLAN ID when specifying a contiguous range."
+
+  vlan_range_end:
+    type: integer
+    required: false
+    conditional_on:
+      field: vlan_range_start
+      condition: present
+    validation: gte_vlan_range_start
+    description: "Last VLAN ID in the range."
+
+  vlan_count_stated:
+    type: integer
+    required: false
+    conditional_on:
+      field: vlan_range_start
+      condition: present
+    validation: equals_vlan_range_computed
+    description: "Must equal (vlan_range_end - vlan_range_start + 1)."
+
+  cidr_notation:
+    type: cidr
+    required: true
+    validation: valid_cidr
+    description: "Network range in CIDR notation. Example: 10.10.0.0/22"
+
+  subnet_mask:
+    type: string
+    required: true
+    validation: agrees_with_cidr
+    description: "Subnet mask. Must agree with CIDR. Example: 255.255.252.0"
+
+  ip_address:
+    type: string
+    required: false
+    description: "Specific IP address for individual endpoint devices. Leave blank for network segments."
+
+  hostname:
+    type: string
+    required: false
+    description: "Fully qualified or short hostname. Example: webserver01.client.local"
+
+  mac_address:
+    type: string
+    required: false
+    description: "MAC address. Required for client-provisioned endpoints. Format: AA:BB:CC:DD:EE:FF"
+
+  network_segment:
+    type: string
+    required: false
+    description: "Network zone or segment name. Example: DMZ, CORP-LAN, PCI-ZONE, GUEST-WIFI"
+
+  os_platform:
+    type: string
+    required: false
+    description: "OS / firmware / platform. Example: Windows Server 2022, Cisco IOS 15.2, Ubuntu 22.04"
+
+  description:
+    type: string
+    required: true
+    description: "Purpose or function in the client environment."
+
+  delivery_method:
+    type: enum
+    required: true
+    values:
+      - network_discoverable
+      - client_provisioned
+      - physical_access
+    description: "network_discoverable: found by scanning. client_provisioned: client provides specific details. physical_access: requires physical access."
+
+  delivery_confirmed:
+    type: boolean
+    required: false
+    default: false
+    conditional_on:
+      field: delivery_method
+      value: client_provisioned
+    description: "Testing blocked until confirmed. Client must deliver IP/hostname before testing proceeds."
+
+  delivery_confirmed_date:
+    type: date
+    required: true
+    conditional_on:
+      field: delivery_confirmed
+      value: true
+    description: "Date client confirmed delivery of asset details."
+
+  confirmed_address:
+    type: string
+    required: true
+    conditional_on:
+      field: delivery_confirmed
+      value: true
+    description: "Confirmed IP address or hostname from client."
+
+  undisclosed_device_disclaimer:
+    type: checkbox
+    required: true
+    default: false
+    description: "REQUIRED — Acknowledge: Testing firm bears no responsibility for connectivity, discovery, or functionality of undisclosed devices. Best-effort discovery will be performed. Undocumented devices left in a dysfunctional state are the client's responsibility to document and repair."
+
+out_of_scope_network_fields:
+  # Inherits all in_scope_network_fields fields (cidr, subnet_mask, ip_address,
+  # mac_address, hostname, vlan_id, device_type, description).
+  # Precise identification is mandatory — vague exclusions are not acceptable.
+
+  exclusion_reason:
+    type: string
+    required: true
+    description: "Specific reason for exclusion. Examples: Federal Reserve connection — federally regulated; Production payment processor — PCI QSA scope decision."
+
+  third_party_operated:
+    type: boolean
+    required: true
+    description: "Whether this asset is operated by a third party."
+
+  third_party_name:
+    type: string
+    required: true
+    conditional_on:
+      field: third_party_operated
+      value: true
+    description: "Third-party operator full legal name."
+
+  third_party_contact_name:
+    type: string
+    required: true
+    conditional_on:
+      field: third_party_operated
+      value: true
+    description: "Name of third-party security or operations contact for immediate use if accidental contact occurs."
+
+  third_party_contact_phone:
+    type: string
+    required: true
+    conditional_on:
+      field: third_party_operated
+      value: true
+    description: "Direct 24/7 phone number for third-party contact — reachable during all testing windows."
+
+  third_party_contact_email:
+    type: string
+    required: false
+    conditional_on:
+      field: third_party_operated
+      value: true
+    description: "Email address for third-party contact."
+
+  regulatory_exclusion:
+    type: boolean
+    required: true
+    description: "Whether exclusion is mandated by regulation (e.g., Federal Reserve, SWIFT, PCI QSA scope boundary)."
+
+physical_location_fields:
+  location_name:
+    type: string
+    required: true
+    description: "Common name (e.g. Headquarters, East Branch, Data Center Colocation)."
+
+  address_full:
+    type: string
+    required: true
+    description: "Full street address including city, state, and zip."
+
+  location_type:
+    type: enum
+    required: true
+    values:
+      - office
+      - branch
+      - data_center
+      - soc
+      - warehouse
+      - retail
+      - colocation
+      - other
+    description: "Facility type. Drives applicable activity options."
+
+  authorized_activities:
+    type: multiselect
+    required: true
+    values:
+      - tailgating_entry
+      - badge_cloning
+      - badge_access_testing
+      - dumpster_reconnaissance
+      - server_room_access
+      - network_closet_access
+      - workstation_physical_access
+      - usb_device_planting
+      - social_engineering_of_staff
+      - camera_bypass_attempt
+      - lock_bypass_non_destructive
+      - visitor_policy_testing
+      - clean_desk_audit
+      - equipment_labeling_review
+      - data_center_cage_access
+      - soc_access_attempt
+      - rooftop_ap_enumeration
+    description: "Select ALL authorized activities at this location. Activities not listed are NOT authorized. Select each deliberately."
+
+  pre_notification_required:
+    type: boolean
+    required: true
+    description: "Whether client must be notified before physical testing at this location."
+
+  pre_notification_hours:
+    type: integer
+    required: true
+    conditional_on:
+      field: pre_notification_required
+      value: true
+    min: 1
+    description: "Hours of advance notice required before physical testing."
+
+  pre_notification_contact_ref:
+    type: reference
+    required: true
+    conditional_on:
+      field: pre_notification_required
+      value: true
+    references: contacts
+    description: "Contact role that must receive advance notification (typically physical_security_manager)."
+
+  facility_third_party:
+    type: boolean
+    required: true
+    description: "Whether the facility is operated by a third party (e.g., colocation data center)."
+
+  facility_security_contact:
+    type: string
+    required: true
+    conditional_on:
+      field: facility_third_party
+      value: true
+    description: "Third-party facility security contact name and direct phone number."
+
+  facility_notified:
+    type: boolean
+    required: false
+    conditional_on:
+      field: facility_third_party
+      value: true
+    description: "Blocks testing if false — third-party facility must be notified before testing."

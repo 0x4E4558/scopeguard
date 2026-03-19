@@ -1,0 +1,160 @@
+group: social_engineering
+version: "1.0"
+description: >
+  Social engineering scope and constraints.
+  This entire group is conditional on engagement_type including social engineering.
+  All fields are hidden and not required if social engineering is not in scope.
+
+activation_condition:
+  engagement_type_includes_se: true
+  # SE is present in: full_scope, red_team
+  # Also activated if se_explicitly_included=true for other engagement types
+
+fields:
+  phishing_authorized:
+    type: boolean
+    required: true
+
+  phishing_target_list_due_date:
+    type: date
+    required: true
+    conditional_on:
+      field: phishing_authorized
+      value: true
+    validation: before_authorized_start_date
+    description: "Date by which client will deliver the exclusion list (if any). Leave blank if all employees are in scope — exclusions are listed below."
+
+  phishing_target_departments:
+    type: array
+    item_type: string
+    required: true
+    conditional_on:
+      field: phishing_authorized
+      value: true
+    min_items: 1
+    description: "Explicit department list. 'All staff' is not an acceptable value."
+
+  phishing_target_max_count:
+    type: integer
+    required: false
+    conditional_on:
+      field: phishing_authorized
+      value: true
+    min: 1
+
+  pretext_approval_required:
+    type: boolean
+    required: false
+    conditional_on:
+      field: phishing_authorized
+      value: true
+
+  pretext_approver:
+    type: reference
+    required: false
+    conditional_on:
+      field: pretext_approval_required
+      value: true
+    references: contacts
+    description: "Typically legal_counsel contact."
+
+  vishing_authorized:
+    type: boolean
+    required: true
+
+  vishing_targets:
+    type: string
+    required: true
+    conditional_on:
+      field: vishing_authorized
+      value: true
+    validation: not_all_staff
+    description: "Must specify role or department. 'All staff' is not acceptable."
+
+  caller_id_spoofing_authorized:
+    type: boolean
+    required: false
+    conditional_on:
+      field: vishing_authorized
+      value: true
+
+  smishing_authorized:
+    type: boolean
+    required: true
+    description: "Boolean only — no sub-fields if false."
+
+  impersonation_authorized:
+    type: boolean
+    required: true
+    description: "Physical impersonation at in-scope locations."
+
+  approved_pretexts:
+    type: array
+    item_type: string
+    required: true
+    conditional_on:
+      field: impersonation_authorized
+      value: true
+    min_items: 1
+    validation: not_vague
+    description: "Explicit approved pretext list. Minimum 1 if authorized."
+
+  excluded_se_targets:
+    type: array
+    item_type: string
+    required: false
+    description: >
+      Individuals, roles, or departments EXCLUDED from social engineering testing.
+      Leave empty to indicate ALL employees are in scope.
+      Examples: "C-Suite executives", "Legal department", "john.smith@client.com"
+
+  se_target_scope_confirmed:
+    type: checkbox
+    required: true
+    description: >
+      Confirm that the target scope has been explicitly agreed upon with the client.
+      Check this box to confirm: either all employees are in scope,
+      or the exclusion list above is complete and agreed upon.
+
+  usb_drop_authorized:
+    type: boolean
+    required: true
+
+  usb_payload_type:
+    type: enum
+    required: true
+    conditional_on:
+      field: usb_drop_authorized
+      value: true
+    values:
+      - inert_tracking
+      - executable
+    description: "'executable' requires separate written authorization field."
+
+  usb_executable_authorization:
+    type: string
+    required: false
+    conditional_on:
+      field: usb_payload_type
+      value: executable
+    description: "Written authorization reference for executable payloads."
+
+  usb_recovery_window_hours:
+    type: integer
+    required: false
+    conditional_on:
+      field: usb_drop_authorized
+      value: true
+    min: 1
+    description: "Maximum hours before all dropped devices must be recovered or accounted for."
+
+  usb_locations:
+    type: array
+    item_type: reference
+    references: physical_locations
+    required: true
+    conditional_on:
+      field: usb_drop_authorized
+      value: true
+    min_items: 1
+    description: "References to physical location records. Limits USB drops to specific locations."

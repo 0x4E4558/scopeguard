@@ -1,0 +1,187 @@
+group: contacts
+version: "1.0"
+description: Contact records and required roles matrix
+
+contact_record_fields:
+  role:
+    type: enum
+    required: true
+    values:
+      - authorizing_executive
+      - primary_technical_contact
+      - business_continuity_contact
+      - legal_counsel
+      - soc_duty_contact
+      - physical_security_manager
+      - emergency_halt_authority
+      - engagement_lead
+      - team_member
+    description: "Role this contact fills in the engagement."
+
+  full_name:
+    type: string
+    required: true
+
+  title:
+    type: string
+    required: true
+
+  organization:
+    type: string
+    required: true
+
+  phone_primary:
+    type: string
+    required: true
+    description: "Business / office phone. Include area code."
+
+  phone_mobile:
+    type: string
+    required: false
+    description: "Mobile / personal phone. Required for emergency halt authority and engagement lead."
+    validation: phone_format
+
+  email:
+    type: string
+    required: true
+    description: "Validated against RFC 5322 pattern."
+    validation: rfc5322_email
+
+  preferred_contact_method:
+    type: enum
+    required: false
+    values:
+      - email
+      - phone_primary
+      - phone_mobile
+      - signal
+    description: "Preferred method for routine communications."
+
+  # ── Attorney of Record specific fields ──────────────────────────────
+  # These fields are shown only when role = legal_counsel (Attorney of Record)
+
+  bar_number:
+    type: string
+    required: false
+    description: "State bar number or registration number. Required for Attorney of Record (legal_counsel role (Attorney of Record))."
+
+  bar_jurisdiction:
+    type: string
+    required: false
+    description: "State(s) or jurisdiction(s) in which counsel is licensed to practice."
+
+  law_firm:
+    type: string
+    required: false
+    description: "Law firm or legal department name."
+
+  engagement_authority:
+    type: enum
+    required: false
+    values:
+      - pretext_approval
+      - document_review
+      - full_engagement_counsel
+      - incident_response_counsel
+    description: "Scope of counsel's authority in this engagement."
+
+  certifications:
+    type: array
+    item_type: string
+    required: false
+    description: "For tester contacts only. E.g. OSCP, CISSP, CEH."
+
+  authorized_source_ips:
+    type: array
+    item_type: cidr_or_ip
+    required: false
+    description: "Source IPs for network testing. Required for testers conducting network tests. Enter one IP or CIDR per entry." 
+    validation: phone_format
+    description: "Must include country code or area code."
+
+  phone_mobile:
+    type: string
+    required: false
+    conditional_required_for_roles:
+      - emergency_halt_authority
+      - engagement_lead
+    validation: phone_format
+
+  email:
+    type: string
+    required: true
+    validation: rfc5322_email
+    description: "Validated against RFC 5322 pattern."
+
+  certifications:
+    type: array
+    item_type: string
+    required: false
+    applicable_to: tester_contacts
+    description: "For tester contacts only. Free-text array."
+
+  authorized_source_ips:
+    type: array
+    item_type: cidr_or_ip
+    required: false
+    conditional_required_for_roles:
+      - tester_network
+    description: >
+      Required for all tester contacts who conduct network testing.
+      Each entry validated as a valid IP or CIDR.
+      Not required for physical/SE-only testers.
+
+required_roles:
+  # Format: role_id -> {label, required_for_engagement_types[], notes}
+  authorizing_executive:
+    label: "Authorizing Executive"
+    required_for: [external_only, internal_only, web_app, full_scope, red_team, vulnerability_assessment]
+    notes: "Must have legal authority to authorize testing of all listed assets."
+    requires_mobile: true
+
+  primary_technical_contact:
+    label: "Primary Technical Contact"
+    required_for: [external_only, internal_only, web_app, full_scope, red_team, vulnerability_assessment]
+    notes: "Receives daily status reports and critical finding notifications."
+
+  business_continuity_contact:
+    label: "Business Continuity Contact"
+    required_for: [full_scope, red_team]
+    notes: "Secondary escalation if primary contacts unreachable."
+
+  legal_counsel:
+    label: "Attorney of Record"
+    required_for: [full_scope, red_team]
+    conditional_for: [external_only, internal_only, web_app, vulnerability_assessment]
+    conditional_trigger: social_engineering_in_scope
+    notes: "Required when social engineering pretexts require approval."
+
+  soc_duty_contact:
+    label: "SOC / Incident Response Contact"
+    required_for: [full_scope, red_team]
+    notes: "Required when alert suppression configuration is needed."
+
+  physical_security_manager:
+    label: "Physical Security Manager"
+    required_for: [full_scope, red_team]
+    conditional_trigger: physical_locations_defined
+    notes: "Required for all physical testing locations."
+    requires_mobile: false
+
+  emergency_halt_authority:
+    label: "Emergency Halt Authority"
+    required_for: [external_only, internal_only, web_app, full_scope, red_team, vulnerability_assessment]
+    notes: "May be the same person as authorizing_executive. Must have mobile number."
+    requires_mobile: true
+
+  engagement_lead:
+    label: "Engagement Lead (Testing Firm)"
+    required_for: [external_only, internal_only, web_app, full_scope, red_team, vulnerability_assessment]
+    notes: "Responsible for ROE compliance by all team members."
+    requires_mobile: true
+
+  team_members:
+    label: "Additional Team Members (Testing Firm)"
+    required_for: []
+    conditional_trigger: multiple_testers
+    notes: "Required if more than one tester. All members must sign ROE acknowledgment."

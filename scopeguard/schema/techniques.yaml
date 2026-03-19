@@ -1,0 +1,189 @@
+group: techniques
+version: "2.0"
+description: >
+  Technique authorization matrix.
+  Categories and technique IDs align with MITRE ATT&CK Enterprise v15,
+  NIST SP 800-115 Technical Guide to Information Security Testing,
+  and PTES (Penetration Testing Execution Standard).
+
+fields:
+  technique_id:
+    type: hidden
+    auto_generate: true
+    description: "System-generated identifier. Format: TECH-[CATEGORY]-[SEQ]."
+
+  mitre_tactic_id:
+    type: enum
+    required: false
+    values:
+      - TA0043 — Reconnaissance
+      - TA0042 — Resource Development
+      - TA0001 — Initial Access
+      - TA0002 — Execution
+      - TA0003 — Persistence
+      - TA0004 — Privilege Escalation
+      - TA0005 — Defense Evasion
+      - TA0006 — Credential Access
+      - TA0007 — Discovery
+      - TA0008 — Lateral Movement
+      - TA0009 — Collection
+      - TA0010 — Exfiltration
+      - TA0011 — Command and Control
+      - TA0040 — Impact
+      - N/A
+    description: "MITRE ATT&CK Tactic. Select the tactic that best describes the phase of this technique."
+
+  mitre_technique_id:
+    type: string
+    required: false
+    description: "MITRE ATT&CK Technique ID (e.g. T1595.001 — Active Scanning: Scanning IP Blocks). See https://attack.mitre.org/techniques/enterprise/"
+
+  nist_800_115_phase:
+    type: enum
+    required: false
+    values:
+      - Planning — Pre-engagement planning and scoping
+      - Discovery — Reconnaissance, scanning, enumeration
+      - Attack — Active exploitation and post-exploitation
+      - Reporting — Documentation and report generation
+      - N/A
+    description: "NIST SP 800-115 testing phase."
+
+  ptes_phase:
+    type: enum
+    required: false
+    values:
+      - Pre-engagement — Scope definition and authorization
+      - Intelligence Gathering — OSINT and passive recon
+      - Threat Modeling — Attack surface analysis
+      - Vulnerability Analysis — Scanning and enumeration
+      - Exploitation — Active exploitation
+      - Post Exploitation — Persistence, lateral movement, exfil
+      - Reporting — Documentation and deliverables
+      - N/A
+    description: "PTES (Penetration Testing Execution Standard) phase." 
+
+  nist_800_115_phase:
+    type: enum
+    required: false
+    values:
+      - Planning
+      - Discovery
+      - Attack
+      - Reporting
+      - N/A
+    description: >
+      NIST SP 800-115 testing phase this technique belongs to.
+      Reference: NIST SP 800-115 Table 3-1.
+
+  ptes_phase:
+    type: enum
+    required: false
+    values:
+      - Pre-engagement
+      - Intelligence Gathering
+      - Threat Modeling
+      - Vulnerability Analysis
+      - Exploitation
+      - Post Exploitation
+      - Reporting
+      - N/A
+    description: >
+      PTES (Penetration Testing Execution Standard) phase.
+      Reference: http://www.pentest-standard.org
+
+  category:
+    type: enum
+    required: true
+    values:
+      - reconnaissance
+      - vuln_scanning
+      - exploitation
+      - post_exploitation
+      - dos
+      - social_engineering
+      - physical
+    description: >
+      Technique category. Maps to MITRE ATT&CK tactic groupings:
+      reconnaissance→TA0043, vuln_scanning→TA0007/TA0043,
+      exploitation→TA0001/TA0002, post_exploitation→TA0003-TA0011,
+      dos→TA0040, social_engineering→TA0001/TA0042, physical→TA0001.
+
+  technique_name:
+    type: string
+    required: true
+    description: "Human-readable name. Use MITRE ATT&CK technique name where a direct mapping exists."
+
+  authorization_status:
+    type: enum
+    required: true
+    default: not_authorized
+    values:
+      - authorized
+      - not_authorized
+      - conditional
+    description: "Default is not_authorized — must explicitly authorize."
+
+  conditions:
+    type: string
+    required: true
+    conditional_on:
+      field: authorization_status
+      value: conditional
+    description: "Specific, actionable conditions. Vague language ('only if necessary') is rejected by validation."
+
+  approval_workflow:
+    type: string
+    required: true
+    conditional_on:
+      field: authorization_status
+      value: conditional
+    description: "Who approves, by what method, documented where."
+
+  maintenance_window_required:
+    type: boolean
+    required: true
+    default: false
+    description: "Whether this technique may only be used during a defined maintenance window."
+
+  maintenance_window_ref:
+    type: string
+    required: true
+    conditional_on:
+      field: maintenance_window_required
+      value: true
+    description: "Window ID reference (e.g. MW-001). Must match a defined maintenance window."
+
+  notification_required:
+    type: boolean
+    required: true
+    default: false
+    description: "Whether client must be notified before using this technique."
+
+  notification_lead_time_hours:
+    type: integer
+    required: true
+    conditional_on:
+      field: notification_required
+      value: true
+    min: 1
+    description: "Minimum hours of advance notice required."
+
+  notification_recipient:
+    type: string
+    required: true
+    conditional_on:
+      field: notification_required
+      value: true
+    description: "Contact role that receives notification (e.g. primary_technical_contact)."
+
+  scope_limitation:
+    type: string
+    required: false
+    description: "Additional scope constraint (e.g. 'development environment only', 'VLAN 60-61 only')."
+
+  prohibited:
+    type: boolean
+    required: true
+    default: false
+    description: "If true, listed in absolute prohibitions. Cannot be authorized under any condition."

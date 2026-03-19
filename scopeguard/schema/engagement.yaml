@@ -1,0 +1,129 @@
+group: engagement_identity
+version: "1.0"
+description: Core engagement identification and metadata fields
+
+fields:
+  engagement_id:
+    type: string
+    required: true
+    pattern: "^[A-Za-z0-9-]+$"
+    description: "Auto-generated from client name, year, and type. Format: [CLIENT]-[YYYY]-[TYPE]-[NNNNNN]. Type codes: PT=Pentest, RT=Red Team, VA=Vuln Assessment, WA=Web App, INT=Internal, EXT=External."
+    auto_generate: true
+
+  sow_reference:
+    type: string
+    required: true
+    description: "Auto-generated from engagement ID. Format: SOW-[ENGAGEMENT_ID]. Example: SOW-MCB-2026-PT-000001"
+
+  msa_reference:
+    type: string
+    required: false
+    description: "MSA reference number. MSA should exist BEFORE scheduling the pre-engagement meeting. Format: MSA-[CLIENT]-[YYYY]-[NNNNNN]. Example: MSA-MCB-2024-000001"
+
+  client_org_legal_name:
+    type: string
+    required: true
+    description: "Full legal name of client entity as it will appear on signed documents."
+
+  testing_firm_legal_name:
+    type: string
+    required: true
+    description: "Full legal name of testing firm as it will appear on signed documents."
+
+  engagement_type:
+    type: enum
+    required: true
+    values:
+      - external_only
+      - internal_only
+      - web_app
+      - full_scope
+      - red_team
+      - vulnerability_assessment
+    description: "Drives conditional field requirements throughout the schema."
+
+  classification:
+    type: enum
+    required: true
+    values:
+      - confidential
+      - restricted
+      - internal
+      - public
+    description: "Appears in document headers and footers."
+
+  regulatory_basis:
+    type: array
+    item_type: enum
+    required: false
+    values:
+      - GLBA
+      - PCI-DSS
+      - HIPAA
+      - SOX
+      - FISMA
+      - state_law
+      - internal_policy
+      - other
+    description: "Drives regulatory clause inclusion in output documents."
+
+  cde_scope_decision:
+    type: enum
+    required: false
+    conditional_on:
+      field: regulatory_basis
+      contains: PCI-DSS
+    values:
+      - in_scope
+      - explicitly_excluded
+      - not_applicable
+    description: >
+      Required when PCI-DSS is selected. Explicitly state whether
+      Cardholder Data Environment (CDE) assets are in scope, explicitly
+      excluded, or not applicable to this engagement.
+
+  cde_scope_notes:
+    type: string
+    required: false
+    conditional_on:
+      field: regulatory_basis
+      contains: PCI-DSS
+    description: >
+      Describe which systems constitute the CDE or explain why CDE assets
+      are excluded/not applicable. This text appears verbatim in the SOW
+      regulatory section.
+
+  document_version:
+    type: string
+    required: true
+    default: "1.0"
+    pattern: "^\\d+\\.\\d+$"
+    description: "Semantic version string. Increment on material changes."
+
+  document_status:
+    type: enum
+    required: true
+    values:
+      - draft
+      - pending_review
+      - pending_signature
+      - executed
+    description: "'executed' status requires all signature fields populated."
+
+  prepared_by:
+    type: string
+    required: true
+    description: "Individual who prepared the document — name and firm."
+
+  prepared_date:
+    type: date
+    required: true
+    validation: not_future
+    description: "Must not be in the future."
+
+  schema_version:
+    type: string
+    required: true
+    auto_populate: true
+    immutable: true
+    description: "Auto-populated. Records the schema version this engagement was created under."
