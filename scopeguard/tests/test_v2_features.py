@@ -556,3 +556,90 @@ class TestRouteRendering:
         r = self._get(f"/engagement/{self.eng_id}/generate/roe")
         assert r.status_code == 200
         assert len(r.data) > 10_000
+
+
+# ─── Export / Import / Duplicate routes ──────────────────────────────────────
+
+class TestExportImportDuplicate(TestSectionRendering):
+    """Export, import and duplicate engagement endpoints."""
+
+    def test_export_returns_json(self):
+        r = self._get(f"/engagement/{self.eng_id}/export")
+        assert r.status_code == 200
+        assert r.content_type == "application/json"
+        payload = json.loads(r.data)
+        assert payload.get("scopeguard_export") is True
+        assert "data" in payload
+
+    def test_export_contains_identity(self):
+        r = self._get(f"/engagement/{self.eng_id}/export")
+        payload = json.loads(r.data)
+        assert "identity" in payload["data"]
+
+    def test_import_creates_new_engagement(self):
+        # Export the current engagement first
+        r_export = self._get(f"/engagement/{self.eng_id}/export")
+        exported_bytes = r_export.data
+
+        # Import it back — should create a new engagement and redirect
+        import io as _io
+        r_import = self.client.post(
+            "/import",
+            data={"file": (_io.BytesIO(exported_bytes), "test-export.json", "application/json")},
+            content_type="multipart/form-data",
+            follow_redirects=False,
+        )
+        assert r_import.status_code == 302
+        location = r_import.headers["Location"]
+        assert "/section/identity" in location
+
+    def test_import_invalid_json_returns_400(self):
+        import io as _io
+        r = self.client.post(
+            "/import",
+            data={"file": (_io.BytesIO(b"not json {{{"), "bad.json", "application/json")},
+            content_type="multipart/form-data",
+        )
+        assert r.status_code == 400
+
+    def test_import_no_file_returns_400(self):
+        r = self.client.post("/import")
+        assert r.status_code == 400
+
+    def test_duplicate_creates_new_draft(self):
+        r = self.client.post(
+            f"/engagement/{self.eng_id}/duplicate",
+            follow_redirects=False,
+        )
+        assert r.status_code == 302
+        location = r.headers["Location"]
+        new_eng_id = location.split("/")[2]
+        assert new_eng_id != self.eng_id
+
+        # The new engagement should have identity data loaded
+        r2 = self._get(f"/engagement/{new_eng_id}/section/identity")
+        assert r2.status_code == 200
+
+    def test_duplicate_clears_signatures(self):
+        from app.storage import load_engagement as _load
+        r = self.client.post(
+            f"/engagement/{self.eng_id}/duplicate",
+            follow_redirects=False,
+        )
+        new_eng_id = r.headers["Location"].split("/")[2]
+        record = _load(new_eng_id)
+        identity = record["data"].get("identity", {})
+        assert identity.get("client_signatory_name") is None
+        assert identity.get("document_status") == "draft"
+
+    def test_index_has_export_button(self):
+        r = self._get("/")
+        assert b"Export" in r.data
+
+    def test_index_has_copy_button(self):
+        r = self._get("/")
+        assert b"Copy" in r.data
+
+    def test_index_has_import_button(self):
+        r = self._get("/")
+        assert b"Import" in r.data or b"import" in r.data

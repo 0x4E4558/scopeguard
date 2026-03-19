@@ -901,6 +901,58 @@ def test_route_roe_generates():
     r = client.get(f"/engagement/{eng_id}/generate/roe")
     assert r.status_code == 200 and len(r.data) > 10_000
 
+def test_route_export_returns_json():
+    import json as _json
+    client, eng_id = _setup_test_client()
+    r = client.get(f"/engagement/{eng_id}/export")
+    assert r.status_code == 200
+    assert r.content_type == "application/json"
+    payload = _json.loads(r.data)
+    assert payload.get("scopeguard_export") is True
+    assert "identity" in payload["data"]
+
+def test_route_import_creates_engagement():
+    import json as _json
+    import io as _io
+    client, eng_id = _setup_test_client()
+    r_export = client.get(f"/engagement/{eng_id}/export")
+    r_import = client.post(
+        "/import",
+        data={"file": (_io.BytesIO(r_export.data), "test.json", "application/json")},
+        content_type="multipart/form-data",
+        follow_redirects=False,
+    )
+    assert r_import.status_code == 302
+    assert "/section/identity" in r_import.headers["Location"]
+
+def test_route_import_invalid_json_returns_400():
+    import io as _io
+    client, _ = _setup_test_client()
+    r = client.post(
+        "/import",
+        data={"file": (_io.BytesIO(b"not json {{{"), "bad.json", "application/json")},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 400
+
+def test_route_duplicate_creates_new_draft():
+    from app.storage import load_engagement as _load
+    client, eng_id = _setup_test_client()
+    r = client.post(f"/engagement/{eng_id}/duplicate", follow_redirects=False)
+    assert r.status_code == 302
+    new_id = r.headers["Location"].split("/")[2]
+    assert new_id != eng_id
+    record = _load(new_id)
+    identity = record["data"].get("identity", {})
+    assert identity.get("document_status") == "draft"
+    assert identity.get("client_signatory_name") is None
+
+def test_route_index_has_new_buttons():
+    client, _ = _setup_test_client()
+    r = client.get("/")
+    assert b"Export" in r.data
+    assert b"Copy" in r.data
+
 
 ALL_TESTS = [
     # VAL rules
@@ -1035,6 +1087,12 @@ ALL_TESTS = [
     (test_route_preflight_renders,           "V2: preflight renders 200"),
     (test_route_sow_generates,               "V2: SOW generation route works"),
     (test_route_roe_generates,               "V2: ROE generation route works"),
+    # Export / Import / Duplicate
+    (test_route_export_returns_json,         "V2: export returns JSON payload"),
+    (test_route_import_creates_engagement,   "V2: import creates new engagement"),
+    (test_route_import_invalid_json_returns_400, "V2: import invalid JSON returns 400"),
+    (test_route_duplicate_creates_new_draft, "V2: duplicate creates new draft"),
+    (test_route_index_has_new_buttons,       "V2: index shows Export and Copy buttons"),
 ]
 
 

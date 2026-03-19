@@ -5,14 +5,17 @@ ScopeGuard Flask application.
 Run with: python app.py  (from the scopeguard/ directory)
 """
 
+import os
 import sys
 import json
+import secrets
 from pathlib import Path
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for, abort
+from flask import (Flask, render_template, request, jsonify, redirect,
+                   url_for, abort, send_file)
 
 from app.storage import init_db, create_engagement, load_engagement, \
     save_section, update_status, list_engagements, delete_engagement
@@ -22,7 +25,10 @@ from scopeguard.validator import Validator
 from scopeguard.finding import Severity
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
-app.secret_key = "scopeguard-local-dev"
+# Secret key: prefer an environment variable so it stays stable across restarts.
+# Falls back to a random key (sessions won't survive restarts, which is fine for
+# a local single-user tool).
+app.secret_key = os.environ.get("SCOPEGUARD_SECRET_KEY") or secrets.token_hex(32)
 
 
 def _json_serial(obj):
@@ -218,7 +224,6 @@ def generate_document(eng_id, doc_type):
 
     from app.hydrator import hydrate
     from app.generator import generate_sow, generate_roe
-    from flask import send_file
     import io
 
     engagement = hydrate(record["data"])
@@ -246,6 +251,83 @@ def delete_eng(eng_id):
     delete_engagement(eng_id)
     return redirect(url_for("index"))
 
+
+# ─── JSON export ──────────────────────────────────────────────────────────────
+
+@app.route("/engagement/<eng_id>/export")
+def export_engagement(eng_id):
+    """Download the raw engagement data as a JSON file for backup or transfer."""
+    record = load_engagement(eng_id)
+    if record is None:
+        abort(404)
+
+    eng_id_str = record["data"].get("identity", {}).get("engagement_id", eng_id[:8])
+    filename = f"{eng_id_str}-engagement.json"
+
+    export_data = {
+        "scopeguard_export": True,
+        "exported_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+        "engagement_row_id": eng_id,
+        "data": record["data"],
+    }
+    import io as _io
+    buf = _io.BytesIO(json.dumps(export_data, indent=2, default=_json_serial).encode("utf-8"))
+    buf.seek(0)
+    return send_file(buf, mimetype="application/json", as_attachment=True,
+                     download_name=filename)
+
+
+# ─── JSON import ──────────────────────────────────────────────────────────────
+
+@app.route("/import", methods=["POST"])
+def import_engagement():
+    """Accept a previously exported JSON file and create a new engagement from it."""
+    uploaded = request.files.get("file")
+    if not uploaded:
+        return jsonify({"error": "No file uploaded"}), 400
+    try:
+        payload = json.loads(uploaded.read().decode("utf-8"))
+    except (ValueError, UnicodeDecodeError) as exc:
+        return jsonify({"error": f"Invalid JSON: {exc}"}), 400
+
+    # Accept either the exported envelope or a bare data dict
+    data = payload.get("data", payload) if isinstance(payload, dict) else {}
+    if not isinstance(data, dict):
+        return jsonify({"error": "Unrecognised format — expected a JSON object"}), 400
+
+    row_id = create_engagement()
+    for section_id, section_data in data.items():
+        if section_id in SECTION_IDS and isinstance(section_data, (dict, list)):
+            save_section(row_id, section_id, section_data)
+
+    return redirect(url_for("section", eng_id=row_id, section_id="identity"))
+
+
+# ─── Duplicate engagement ─────────────────────────────────────────────────────
+
+@app.route("/engagement/<eng_id>/duplicate", methods=["POST"])
+def duplicate_engagement(eng_id):
+    """Create a copy of an existing engagement as a new draft."""
+    record = load_engagement(eng_id)
+    if record is None:
+        abort(404)
+
+    new_id = create_engagement()
+    for section_id, section_data in record["data"].items():
+        if section_id in SECTION_IDS and section_data:
+            # Reset execution-specific fields in the identity copy
+            if section_id == "identity":
+                section_data = dict(section_data)
+                section_data.pop("client_signatory_name", None)
+                section_data.pop("client_signatory_date", None)
+                section_data.pop("tester_lead_signatory_name", None)
+                section_data.pop("tester_lead_signatory_date", None)
+                section_data.pop("tester_principal_signatory_name", None)
+                section_data.pop("tester_principal_signatory_date", None)
+                section_data["document_status"] = "draft"
+            save_section(new_id, section_id, section_data)
+
+    return redirect(url_for("section", eng_id=new_id, section_id="identity"))
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -377,8 +459,3 @@ def create_app():
         pass
     return app
 
-
-if __name__ == "__main__":
-    init_db()
-    print("\n  ScopeGuard running at http://127.0.0.1:5000\n")
-    app.run(debug=True, port=5000)
