@@ -13,7 +13,7 @@ Sections save independently so partial work is never lost.
 import sqlite3
 import json
 import uuid
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -56,7 +56,7 @@ def init_db() -> None:
 def create_engagement() -> str:
     """Create a new empty engagement record, return its UUID."""
     row_id = str(uuid.uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     with get_connection() as conn:
         conn.execute(
             "INSERT INTO engagements (id, created_at, updated_at, data_json) VALUES (?, ?, ?, ?)",
@@ -89,7 +89,7 @@ def save_section(row_id: str, section: str, section_data: dict) -> None:
             raise KeyError(f"Engagement {row_id} not found")
         data = json.loads(row["data_json"])
         data[section] = section_data
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         conn.execute(
             "UPDATE engagements SET data_json = ?, updated_at = ? WHERE id = ?",
             (json.dumps(data, default=_json_serial), now, row_id)
@@ -132,7 +132,7 @@ def migrate_technique_data() -> int:
 
 
 def update_status(row_id: str, status: str) -> None:
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     with get_connection() as conn:
         conn.execute(
             "UPDATE engagements SET status = ?, updated_at = ? WHERE id = ?",
