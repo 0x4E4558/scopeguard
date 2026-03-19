@@ -209,7 +209,7 @@ physical_location_fields:
   location_name:
     type: string
     required: true
-    description: "Common name (e.g. Headquarters, East Branch, Data Center Colocation)."
+    description: "Common name for this location (e.g. Headquarters, East Branch, Data Center)."
 
   address_full:
     type: string
@@ -228,7 +228,7 @@ physical_location_fields:
       - retail
       - colocation
       - other
-    description: "Facility type. Drives applicable activity options."
+    description: "Facility type."
 
   authorized_activities:
     type: multiselect
@@ -251,12 +251,12 @@ physical_location_fields:
       - data_center_cage_access
       - soc_access_attempt
       - rooftop_ap_enumeration
-    description: "Select ALL authorized activities at this location. Activities not listed are NOT authorized. Select each deliberately."
+    description: "Select ALL activities authorized at THIS location. Activities not listed are NOT authorized. Select deliberately — this list appears verbatim in the signed document."
 
   pre_notification_required:
     type: boolean
     required: true
-    description: "Whether client must be notified before physical testing at this location."
+    description: "Whether advance notice is required before testing at this location."
 
   pre_notification_hours:
     type: integer
@@ -265,7 +265,7 @@ physical_location_fields:
       field: pre_notification_required
       value: true
     min: 1
-    description: "Hours of advance notice required before physical testing."
+    description: "Hours of advance notice required. Must be confirmed with Physical Security Manager."
 
   pre_notification_contact_ref:
     type: reference
@@ -274,12 +274,12 @@ physical_location_fields:
       field: pre_notification_required
       value: true
     references: contacts
-    description: "Contact role that must receive advance notification (typically physical_security_manager)."
+    description: "Contact role that receives advance notification (typically physical_security_manager)."
 
   facility_third_party:
     type: boolean
     required: true
-    description: "Whether the facility is operated by a third party (e.g., colocation data center)."
+    description: "Whether this facility is operated by a third party (e.g. colocation data center)."
 
   facility_security_contact:
     type: string
@@ -287,7 +287,7 @@ physical_location_fields:
     conditional_on:
       field: facility_third_party
       value: true
-    description: "Third-party facility security contact name and direct phone number."
+    description: "Third-party facility security contact — name and direct phone number. Required immediately if accidental contact occurs."
 
   facility_notified:
     type: boolean
@@ -295,4 +295,4 @@ physical_location_fields:
     conditional_on:
       field: facility_third_party
       value: true
-    description: "Blocks testing if false — third-party facility must be notified before testing."
+    description: "Third-party facility has been notified of the engagement. Testing at this location is blocked until confirmed."

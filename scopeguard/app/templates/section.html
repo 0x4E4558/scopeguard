@@ -100,7 +100,7 @@
             <div class="multiselect-item {% if saved_val and opt in saved_val %}selected{% endif %}"
                  data-value="{{ opt }}">
               <input type="checkbox" style="display:none">
-              {{ opt }}
+              {{ opt | replace('_',' ') | title }}
             </div>
             {% endfor %}
           </div>
@@ -358,7 +358,7 @@
       <div class="list-item">
         <div class="list-item-header" onclick="toggleItem(this)" style="cursor:pointer;">
           <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
-            <span class="item-chevron" style="color:var(--text3); font-size:0.7rem; flex-shrink:0; transition:transform 0.15s;{% if section_id == 'contacts' %} transform:rotate(90deg);{% endif %}">▶</span>
+            <span class="item-chevron" style="color:var(--text3); font-size:0.7rem; flex-shrink:0; transition:transform 0.15s;{% if section_id in ['contacts','physical_locations'] %} transform:rotate(90deg);{% endif %}">▶</span>
 
             {# ── Primary title ── #}
             <span class="list-item-title">
@@ -406,16 +406,27 @@
           <button type="button" class="remove-btn"
                   onclick="event.stopPropagation(); this.closest('.list-item').remove(); SG.scheduleAutosave();">Remove</button>
         </div>
-        <div class="list-item-body" style="display:{% if section_id == 'contacts' %}block{% else %}none{% endif %};">
+        <div class="list-item-body" style="display:{% if section_id in ['contacts','physical_locations'] %}block{% else %}none{% endif %};">
         {% for field in fields %}
         {% set saved_val = item.get(field.name) %}
-        {# ── Insert section headers for contacts at key transition points ── #}
+        {# ── Insert section headers at key transition points ── #}
         {% if section_id == 'contacts' %}
           {% if field.name == 'role' %}
           <div class="field-group-header">Role &amp; Identity</div>
           {% elif field.name == 'phone_primary' %}
           <div class="field-group-header">Contact Details</div>
           {% elif field.name == 'bar_number' %}
+        {% elif section_id == 'physical_locations' %}
+          {% if field.name == 'authorized_activities' %}
+          <div class="field-group-header field-group-header-accent" style="margin-top:12px;">
+            Authorized Testing Activities
+            <span class="field-group-header-note">Select ALL activities authorized at this specific location. Unselected activities are NOT authorized. This list appears verbatim in the signed ROE.</span>
+          </div>
+          {% elif field.name == 'pre_notification_required' %}
+          <div class="field-group-header" style="margin-top:16px;">Notification Requirements</div>
+          {% elif field.name == 'facility_third_party' %}
+          <div class="field-group-header" style="margin-top:16px;">Third-Party Facility</div>
+          {% endif %}
           <div class="field-group-header field-group-header-accent"
                id="legal-creds-header-{{ loop.index0 }}"
                style="transition: opacity 0.2s;">
@@ -482,7 +493,7 @@
           <div class="multiselect-grid multiselect-group" data-field-name="{{ field.name }}">
             {% for opt in field.options %}
             <div class="multiselect-item {% if saved_val and opt in saved_val %}selected{% endif %}"
-                 data-value="{{ opt }}">{{ opt }}</div>
+                 data-value="{{ opt }}">{{ opt | replace('_',' ') | title }}</div>
             {% endfor %}
           </div>
           {% elif field.type == 'array' %}
@@ -1144,7 +1155,9 @@
       (field.options || []).forEach(o => {
         const item = document.createElement('div');
         item.className = 'multiselect-item';
-        item.dataset.value = o; item.textContent = o;
+        item.dataset.value = o;
+        // Format snake_case → Title Case for display
+        item.textContent = o.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
         grid.appendChild(item);
       });
       wrap.appendChild(grid);
@@ -1277,7 +1290,7 @@
     // Body (collapsible — starts expanded for new items)
     const body = document.createElement('div');
     body.className = 'list-item-body';
-    body.style.display = 'block'; // new items start expanded
+    body.style.display = 'block'; // new items always start expanded
     chevron.style.transform = 'rotate(90deg)';
 
     // Fields go into body, with section headers for contacts
@@ -1291,14 +1304,32 @@
                         note: 'Complete for Engagement Lead and Team Members' },
     };
 
+    const PHYS_HEADERS = {
+      authorized_activities:   {
+        title: 'Authorized Testing Activities',
+        note: 'Select ALL activities authorized at this specific location. Unselected activities are NOT authorized. This list appears verbatim in the signed document.',
+        accent: true
+      },
+      pre_notification_required: { title: 'Notification Requirements' },
+      facility_third_party:      { title: 'Third-Party Facility' },
+    };
+
     FIELDS.forEach(field => {
+      // Section headers for contacts
       if (SECTION === 'contacts' && CONTACT_HEADERS[field.name]) {
         const hdr = CONTACT_HEADERS[field.name];
         const div = document.createElement('div');
         div.className = 'field-group-header' + (hdr.accent ? ' field-group-header-accent' : '');
-        div.innerHTML = hdr.title + (hdr.note
-          ? `<span class="field-group-header-note">${hdr.note}</span>`
-          : '');
+        div.innerHTML = hdr.title + (hdr.note ? `<span class="field-group-header-note">${hdr.note}</span>` : '');
+        body.appendChild(div);
+      }
+      // Section headers for physical locations
+      if (SECTION === 'physical_locations' && PHYS_HEADERS[field.name]) {
+        const hdr = PHYS_HEADERS[field.name];
+        const div = document.createElement('div');
+        div.className = 'field-group-header' + (hdr.accent ? ' field-group-header-accent' : '');
+        div.style.marginTop = '12px';
+        div.innerHTML = hdr.title + (hdr.note ? `<span class="field-group-header-note">${hdr.note}</span>` : '');
         body.appendChild(div);
       }
       body.appendChild(buildField(field));

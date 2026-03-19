@@ -53,6 +53,11 @@ def _field_spec(name: str, meta: dict[str, Any]) -> dict[str, Any]:
     if ftype == "enum":
         spec["options"] = meta.get("values", [])
 
+    # Direct multiselect type — values listed under "values" key
+    if ftype == "multiselect":
+        spec["options"] = meta.get("values", [])
+        spec["type"] = "multiselect"
+
     # Array-of-enum gets options too
     if ftype == "array" and meta.get("item_type") == "enum":
         spec["options"] = meta.get("values", [])
