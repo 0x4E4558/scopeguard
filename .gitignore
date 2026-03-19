@@ -48,8 +48,7 @@ coverage.xml
 .DS_Store
 Thumbs.db
 
-# Screenshots and generated artifacts
-*.png
+# Generated image artifacts
 *.jpg
 *.jpeg
 
