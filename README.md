@@ -2,7 +2,7 @@
 ScopeGuard
 Penetration Test Scope & ROE Builder.
 
-There is a definite need for constructive feedback and improevment suggestions here. 
+There is a definite need for constructive feedback and improvement suggestions here. ximianblack gmail
 
 Guides you through building a complete, technically validated, legally defensible Scope of Work and Rules of Engagement document pair — catching every ambiguity, missing field, and inconsistency before anything gets signed.
 
