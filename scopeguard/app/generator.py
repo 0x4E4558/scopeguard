@@ -592,24 +592,33 @@ def generate_sow(eng: Engagement) -> bytes:
             elif vrs is not None:
                 vlan_str = str(vrs) if vrs == vre else f"{vrs}–{vre or vrs}"
 
-            device_type = getattr(a, 'device_type', '') or ''
+            raw_dt      = getattr(a, 'device_type', None) or ''
+            _ACRONYMS = {'vlan':'VLAN','ids_ips':'IDS/IPS','ngfw':'NGFW',
+                         'vpn_gateway':'VPN Gateway','iot_device':'IoT Device',
+                         'next_gen_firewall':'Next-Gen Firewall'}
+            def _fmt_dt(d):
+                if d in _ACRONYMS: return _ACRONYMS[d]
+                return d.replace('_',' ').title()
+            device_type = ', '.join(_fmt_dt(d) for d in raw_dt) if isinstance(raw_dt, list)                           else _fmt_dt(raw_dt)
             mac         = getattr(a, 'mac_address', '') or ''
             hostname    = getattr(a, 'hostname', '') or ''
             ip_addr     = getattr(a, 'ip_address', '') or ''
             delivery    = a.delivery_method.value if a.delivery_method else ''
+            os_plat  = getattr(a, 'os_platform', '') or ''
             asset_rows.append([
                 a.asset_name,
-                device_type.replace('_', ' ').title(),
-                a.cidr_notation or '',
+                device_type,
+                (a.cidr_notation or '') + (" / " + a.subnet_mask if a.subnet_mask else ""),
                 ip_addr or hostname or '',
                 vlan_str,
                 mac,
+                os_plat,
                 delivery.replace('_', ' '),
                 a.description or "",
             ])
         _make_table(doc,
-            ["Asset / Segment", "Type", "CIDR", "IP / Host", "VLAN", "MAC", "Delivery", "Description"],
-            [1.5, 0.9, 1.0, 1.1, 0.5, 1.0, 0.8, 1.7],
+            ["Asset / Segment", "Type", "CIDR / Mask", "IP / Host", "VLAN", "MAC", "OS / Platform", "Delivery", "Description"],
+            [1.3, 0.85, 1.05, 1.0, 0.45, 0.9, 0.95, 0.65, 1.3],
             asset_rows)
 
         # Undisclosed device disclaimer
@@ -646,9 +655,15 @@ def generate_sow(eng: Engagement) -> bytes:
             vlan_str = str(getattr(a, 'vlan_id', '') or '')
             ip_str   = getattr(a, 'ip_address', '') or getattr(a, 'cidr_notation', '') or ''
             mac_str  = getattr(a, 'mac_address', '') or ''
-            tp_name  = getattr(a, 'third_party_name', '') or ''
-            tp_phone = getattr(a, 'third_party_contact_phone', '') or ''
-            tp_contact = f"{tp_name}" + (f" — {tp_phone}" if tp_phone else "")
+            tp_op_name  = getattr(a, 'third_party_name', '') or ''
+            tp_cname    = getattr(a, 'third_party_contact_name', '') or ''
+            tp_phone    = getattr(a, 'third_party_contact_phone', '') or ''
+            # Show operator name on first line, emergency contact on second
+            tp_contact  = tp_op_name
+            if tp_cname or tp_phone:
+                tp_contact += ("\n" if tp_op_name else "") + tp_cname
+                if tp_phone:
+                    tp_contact += (" " if tp_cname else "") + tp_phone
             oos_rows.append([
                 a.asset_name,
                 ip_str,
@@ -713,27 +728,48 @@ def generate_sow(eng: Engagement) -> bytes:
     if eng.social_engineering:
         _subheading(doc, "3.4 Social Engineering Scope")
         se = eng.social_engineering
+        _body(doc,
+            "Default target scope: ALL employees unless explicitly listed in the exclusion table below. "
+            "Phishing, vishing, smishing, impersonation, and USB drop activities are "
+            "governed by the authorization matrix and exclusion list below.")
+
         se_rows = [
             ("Phishing — Email",
              "AUTHORIZED" if se.phishing_authorized else "NOT AUTHORIZED",
-             f"Target departments: {', '.join(se.phishing_target_departments)}" if se.phishing_target_departments else ""),
+             (f"Departments: {', '.join(se.phishing_target_departments)}" if se.phishing_target_departments else "All departments")
+             + (f"\nTarget list delivery due: {_fmt_date(se.phishing_target_list_due_date)}" if se.phishing_target_list_due_date else "")),
             ("Vishing — Phone",
              "AUTHORIZED" if se.vishing_authorized else "NOT AUTHORIZED",
-             se.vishing_targets or ""),
+             se.vishing_targets or "All employees"),
             ("Smishing — SMS",
              "AUTHORIZED" if se.smishing_authorized else "NOT AUTHORIZED",
-             ""),
-            ("Impersonation — Physical",
+             "All employees"),
+            ("Impersonation",
              "AUTHORIZED" if se.impersonation_authorized else "NOT AUTHORIZED",
-             f"Approved pretexts: {', '.join(se.approved_pretexts)}" if se.approved_pretexts else ""),
-            ("USB Drop Baiting",
+             ("Approved pretexts: " + "; ".join(se.approved_pretexts)) if se.approved_pretexts else ""),
+            ("USB Drop / Baiting",
              "AUTHORIZED" if se.usb_drop_authorized else "NOT AUTHORIZED",
-             f"Payload type: {se.usb_payload_type.value if se.usb_payload_type else 'N/A'}" if se.usb_drop_authorized else ""),
+             (f"Payload type: {se.usb_payload_type.value}" if se.usb_payload_type else "")
+             + (f"  Recovery window: {se.usb_recovery_window_hours}h" if se.usb_recovery_window_hours else "")),
         ]
         _make_table(doc,
             ["Vector", "Status", "Conditions / Notes"],
-            [1.8, 1.2, 4.5],
+            [1.6, 1.2, 4.7],
             [[r[0], r[1], r[2]] for r in se_rows])
+
+        # Exclusion table — who is NOT a target
+        excluded = se.excluded_se_targets or []
+        if excluded:
+            _body(doc, "Explicitly Excluded from SE Targeting:", bold=True)
+            _make_table(doc,
+                ["#", "Excluded Individual / Role / Department"],
+                [0.4, 7.1],
+                [[str(i+1), t] for i, t in enumerate(excluded)])
+        else:
+            _body(doc,
+                "Exclusion List: NONE — All employees are in scope for social engineering testing. "
+                "No individuals, roles, or departments are excluded.",
+                bold=True)
 
     # ── CDE Section (PCI-DSS only) ────────────────────────────────────────────────
     reg_basis = [r.value for r in (id_.regulatory_basis or [])]

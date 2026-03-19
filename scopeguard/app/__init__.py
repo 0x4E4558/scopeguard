@@ -70,7 +70,7 @@ def section(eng_id, section_id):
     next_sid = SECTION_IDS[idx + 1] if idx < len(SECTION_IDS) - 1 else None
 
     LIST_SECTIONS = {'contacts', 'in_scope_assets', 'out_of_scope_assets',
-                     'physical_locations', 'techniques', 'maintenance_windows'}
+                     'physical_locations', 'maintenance_windows'}
 
     required_roles = []
     if section_id == 'contacts':
@@ -78,6 +78,15 @@ def section(eng_id, section_id):
 
     highlight_role  = request.args.get('highlight', '')
     highlight_field = request.args.get('field', '')
+
+    # Load technique catalog for the technique matrix section
+    technique_catalog = {}
+    if section_id == 'techniques':
+        import yaml as _yaml
+        import pathlib as _pl
+        _tfile = _pl.Path(__file__).parent.parent / 'schema' / 'techniques.yaml'
+        _tdata = _yaml.safe_load(_tfile.read_text())
+        technique_catalog = _tdata.get('catalog', {})
 
     return render_template(
         "section.html",
@@ -95,6 +104,7 @@ def section(eng_id, section_id):
         required_roles=required_roles,
         highlight_role=highlight_role,
         highlight_field=highlight_field,
+        technique_catalog=technique_catalog if section_id == 'techniques' else {},
     )
 
 
@@ -111,6 +121,24 @@ def save_section_route(eng_id, section_id):
 
     body = request.get_json(force=True, silent=True) or {}
     section_data = body.get("data", {})
+
+    # Guard: technique matrix must arrive as a list of dicts.
+    # If it arrives as a plain dict (flat form scrape fired instead of matrix override),
+    # that means the matrix JS didn't activate — discard the bad save rather than corrupt the data.
+    if section_id == "techniques":
+        if isinstance(section_data, dict):
+            # Bad format — flat scrape. Return current findings without saving.
+            updated = load_engagement(eng_id)
+            findings = _run_validation(updated["data"])
+            return jsonify({
+                "ok": False,
+                "error": "technique_format_error",
+                "findings": _serialize_findings(findings),
+                "block_count": len(findings.blockers()),
+            })
+        # Filter out any non-dict items defensively
+        if isinstance(section_data, list):
+            section_data = [t for t in section_data if isinstance(t, dict) and t.get("technique_id")]
 
     save_section(eng_id, section_id, section_data)
 
@@ -336,6 +364,17 @@ def _serialize_findings(findings) -> list[dict]:
 
 def create_app():
     init_db()
+    # Fix any engagements where techniques was saved as a flat dict
+    try:
+        from app.storage import migrate_technique_data
+        fixed = migrate_technique_data()
+        if fixed:
+            import logging
+            logging.getLogger(__name__).info(
+                f"[startup] Fixed corrupted technique data in {fixed} engagement(s)"
+            )
+    except Exception:
+        pass
     return app
 
 

@@ -217,7 +217,15 @@
       "vlan_range_end": 13,
       "vlan_count_stated": 4,
       "description": "Primary production banking systems",
-      "delivery_method": "network_discoverable"
+      "delivery_method": "network_discoverable",
+      "device_type": [
+        "network_segment",
+        "vlan"
+      ],
+      "vlan_id": 10,
+      "network_segment": "CORE-LAN",
+      "client_asset_list_acknowledged": true,
+      "undisclosed_device_disclaimer": true
     },
     {
       "asset_name": "DMZ / Internet-Facing",
@@ -227,7 +235,16 @@
       "vlan_range_end": 20,
       "vlan_count_stated": 1,
       "description": "Public-facing web, mail, DNS",
-      "delivery_method": "network_discoverable"
+      "delivery_method": "network_discoverable",
+      "device_type": [
+        "network_segment",
+        "firewall",
+        "next_gen_firewall"
+      ],
+      "vlan_id": 20,
+      "network_segment": "DMZ",
+      "client_asset_list_acknowledged": true,
+      "undisclosed_device_disclaimer": true
     },
     {
       "asset_name": "Teller Workstation LAN",
@@ -237,7 +254,15 @@
       "vlan_range_end": 31,
       "vlan_count_stated": 2,
       "description": "Branch teller endpoints, 2 branches",
-      "delivery_method": "network_discoverable"
+      "delivery_method": "network_discoverable",
+      "device_type": [
+        "network_segment",
+        "workstation"
+      ],
+      "vlan_id": 30,
+      "network_segment": "TELLER-LAN",
+      "client_asset_list_acknowledged": true,
+      "undisclosed_device_disclaimer": true
     },
     {
       "asset_name": "ATM Network Segment",
@@ -247,7 +272,15 @@
       "vlan_range_end": 40,
       "vlan_count_stated": 1,
       "description": "ATM fleet \u2014 14 units, 3 locations",
-      "delivery_method": "network_discoverable"
+      "delivery_method": "network_discoverable",
+      "device_type": [
+        "network_segment",
+        "appliance"
+      ],
+      "vlan_id": 40,
+      "network_segment": "ATM-NET",
+      "client_asset_list_acknowledged": true,
+      "undisclosed_device_disclaimer": true
     },
     {
       "asset_name": "Management / OOB",
@@ -257,7 +290,16 @@
       "vlan_range_end": 50,
       "vlan_count_stated": 1,
       "description": "Network mgmt, iDRAC, IPMI \u2014 test read access only",
-      "delivery_method": "network_discoverable"
+      "delivery_method": "network_discoverable",
+      "device_type": [
+        "network_segment",
+        "switch",
+        "router"
+      ],
+      "vlan_id": 50,
+      "network_segment": "MGMT-OOB",
+      "client_asset_list_acknowledged": true,
+      "undisclosed_device_disclaimer": true
     },
     {
       "asset_name": "Development Environment",
@@ -267,7 +309,15 @@
       "vlan_range_end": 61,
       "vlan_count_stated": 2,
       "description": "Non-production clone \u2014 full exploitation authorized",
-      "delivery_method": "network_discoverable"
+      "delivery_method": "network_discoverable",
+      "device_type": [
+        "network_segment",
+        "application_server"
+      ],
+      "vlan_id": 60,
+      "network_segment": "DEV-LAN",
+      "client_asset_list_acknowledged": true,
+      "undisclosed_device_disclaimer": true
     },
     {
       "asset_name": "VoIP Infrastructure",
@@ -277,21 +327,45 @@
       "vlan_range_end": 70,
       "vlan_count_stated": 1,
       "description": "IP telephony \u2014 enumeration only, no DoS",
-      "delivery_method": "network_discoverable"
+      "delivery_method": "network_discoverable",
+      "device_type": [
+        "network_segment",
+        "phone_voip"
+      ],
+      "vlan_id": 70,
+      "network_segment": "VOIP-LAN",
+      "client_asset_list_acknowledged": true,
+      "undisclosed_device_disclaimer": true
     },
     {
       "asset_name": "Wireless \u2014 Corporate",
       "cidr_notation": "192.168.10.0/24",
       "subnet_mask": "255.255.255.0",
       "description": "802.1X corporate wireless \u2014 all attack types authorized",
-      "delivery_method": "network_discoverable"
+      "delivery_method": "network_discoverable",
+      "device_type": [
+        "network_segment",
+        "wireless_ap"
+      ],
+      "vlan_id": 80,
+      "network_segment": "CORP-WIFI",
+      "client_asset_list_acknowledged": true,
+      "undisclosed_device_disclaimer": true
     },
     {
       "asset_name": "Wireless \u2014 Guest",
       "cidr_notation": "192.168.20.0/24",
       "subnet_mask": "255.255.255.0",
       "description": "Guest portal \u2014 enumeration and escape testing only",
-      "delivery_method": "network_discoverable"
+      "delivery_method": "network_discoverable",
+      "device_type": [
+        "network_segment",
+        "wireless_ap"
+      ],
+      "vlan_id": 90,
+      "network_segment": "GUEST-WIFI",
+      "client_asset_list_acknowledged": true,
+      "undisclosed_device_disclaimer": true
     },
     {
       "asset_name": "External Web Application",
@@ -299,7 +373,17 @@
       "subnet_mask": "255.255.255.255",
       "description": "Online banking portal: onlinebanking.meridianbank.com",
       "delivery_method": "client_provisioned",
-      "delivery_confirmed": false
+      "delivery_confirmed": false,
+      "device_type": [
+        "web_server",
+        "application_server"
+      ],
+      "ip_address": "38.142.1.22",
+      "hostname": "www.meridianbank.example.com",
+      "os_platform": "Ubuntu 22.04 LTS",
+      "network_segment": "DMZ",
+      "client_asset_list_acknowledged": true,
+      "undisclosed_device_disclaimer": true
     },
     {
       "asset_name": "External API Gateway",
@@ -307,7 +391,17 @@
       "subnet_mask": "255.255.255.255",
       "description": "api.meridianbank.com \u2014 all documented endpoints",
       "delivery_method": "client_provisioned",
-      "delivery_confirmed": false
+      "delivery_confirmed": false,
+      "device_type": [
+        "application_server",
+        "load_balancer"
+      ],
+      "ip_address": "38.142.1.23",
+      "hostname": "api.meridianbank.example.com",
+      "os_platform": "Ubuntu 22.04 LTS",
+      "network_segment": "DMZ",
+      "client_asset_list_acknowledged": true,
+      "undisclosed_device_disclaimer": true
     },
     {
       "asset_name": "Core Banking App Server",
@@ -315,7 +409,18 @@
       "subnet_mask": "255.255.255.255",
       "description": "FiServ Precision host \u2014 hostname: cbs01.meridianbank.internal",
       "delivery_method": "client_provisioned",
-      "delivery_confirmed": false
+      "delivery_confirmed": false,
+      "device_type": [
+        "application_server",
+        "database_server"
+      ],
+      "ip_address": "10.10.10.50",
+      "hostname": "cbs-prod-01.mcb.internal",
+      "mac_address": "AA:BB:CC:DD:EE:01",
+      "os_platform": "Windows Server 2022",
+      "network_segment": "CORE-LAN",
+      "client_asset_list_acknowledged": true,
+      "undisclosed_device_disclaimer": true
     }
   ],
   "out_of_scope_assets": [
@@ -330,7 +435,15 @@
       "exclusion_reason": "Federally regulated infrastructure \u2014 exclusion mandatory",
       "third_party_operated": true,
       "third_party_name": "Federal Reserve Bank",
-      "regulatory_exclusion": true
+      "regulatory_exclusion": true,
+      "device_type": [
+        "network_segment"
+      ],
+      "vlan_id": 100,
+      "ip_address": "10.1.0.0/30",
+      "third_party_contact_name": "Federal Reserve Bank of Cleveland \u2014 Network Operations",
+      "third_party_contact_phone": "+1-216-579-2000",
+      "third_party_contact_email": "netops@clevelandfed.example.gov"
     },
     {
       "asset_name": "SWIFT Messaging Network",
@@ -343,7 +456,14 @@
       "exclusion_reason": "Third-party regulated network \u2014 separate authorization required",
       "third_party_operated": true,
       "third_party_name": "SWIFT",
-      "regulatory_exclusion": true
+      "regulatory_exclusion": true,
+      "device_type": [
+        "network_segment",
+        "appliance"
+      ],
+      "third_party_contact_name": "SWIFT Customer Support",
+      "third_party_contact_phone": "+1-800-SWIFT-00",
+      "third_party_contact_email": "support@swift.example.com"
     },
     {
       "asset_name": "Card Processing (FIS)",
@@ -357,7 +477,14 @@
       "exclusion_reason": "Third-party PCI-DSS CDE \u2014 separate PCI ASV scope",
       "third_party_operated": true,
       "third_party_name": "FIS",
-      "regulatory_exclusion": false
+      "regulatory_exclusion": false,
+      "device_type": [
+        "application_server",
+        "network_segment"
+      ],
+      "third_party_contact_name": "FIS NOC \u2014 24/7 Operations",
+      "third_party_contact_phone": "+1-800-347-4000",
+      "third_party_contact_email": "noc@fisglobal.example.com"
     },
     {
       "asset_name": "Backup / DR Site",
@@ -370,7 +497,12 @@
       "delivery_method": "network_discoverable",
       "exclusion_reason": "Excluded this engagement \u2014 separate DR test scheduled Q3",
       "third_party_operated": false,
-      "regulatory_exclusion": false
+      "regulatory_exclusion": false,
+      "device_type": [
+        "network_segment",
+        "storage_array"
+      ],
+      "vlan_id": 110
     }
   ],
   "physical_locations": [
@@ -387,7 +519,8 @@
       "pre_notification_required": true,
       "pre_notification_hours": 24,
       "pre_notification_contact_ref": "physical_security_manager",
-      "facility_third_party": false
+      "facility_third_party": false,
+      "location_type": "office"
     },
     {
       "location_name": "East Branch",
@@ -400,7 +533,8 @@
       "pre_notification_required": true,
       "pre_notification_hours": 24,
       "pre_notification_contact_ref": "physical_security_manager",
-      "facility_third_party": false
+      "facility_third_party": false,
+      "location_type": "branch"
     },
     {
       "location_name": "Data Center (Colocation)",
@@ -414,7 +548,8 @@
       "pre_notification_contact_ref": "physical_security_manager",
       "facility_third_party": true,
       "facility_security_contact": "CyrusOne facility security (contact via Robert C. Fenn)",
-      "facility_notified": false
+      "facility_notified": false,
+      "location_type": "colocation"
     }
   ],
   "techniques": [

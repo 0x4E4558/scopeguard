@@ -187,9 +187,19 @@ class NetworkAsset:
     vlan_range_start: Optional[int] = None
     vlan_range_end: Optional[int] = None
     vlan_count_stated: Optional[int] = None
+    vlan_id: Optional[int] = None
     delivery_confirmed: bool = False
     delivery_confirmed_date: Optional[date] = None
     confirmed_address: Optional[str] = None
+    # v2 device detail fields
+    device_type: Optional[list] = None          # multiselect — list of type strings
+    ip_address: Optional[str] = None
+    hostname: Optional[str] = None
+    mac_address: Optional[str] = None
+    os_platform: Optional[str] = None
+    network_segment: Optional[str] = None
+    client_asset_list_acknowledged: bool = False
+    undisclosed_device_disclaimer: bool = False
 
     def vlan_count_computed(self) -> Optional[int]:
         if self.vlan_range_start is not None and self.vlan_range_end is not None:
@@ -203,6 +213,10 @@ class OutOfScopeAsset(NetworkAsset):
     third_party_operated: bool = False
     third_party_name: Optional[str] = None
     regulatory_exclusion: bool = False
+    # v2 third-party contact fields
+    third_party_contact_name: Optional[str] = None
+    third_party_contact_phone: Optional[str] = None
+    third_party_contact_email: Optional[str] = None
 
 
 @dataclass
@@ -212,6 +226,7 @@ class PhysicalLocation:
     authorized_activities: list[str]
     pre_notification_required: bool
     facility_third_party: bool
+    location_type: Optional[str] = None          # office, branch, data_center, soc, etc.
     pre_notification_hours: Optional[int] = None
     pre_notification_contact_ref: Optional[str] = None   # contact role reference
     facility_security_contact: Optional[str] = None

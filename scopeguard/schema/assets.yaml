@@ -9,7 +9,7 @@ in_scope_network_fields:
     description: "Descriptive name for this network segment, VLAN, or device group."
 
   device_type:
-    type: enum
+    type: multiselect
     required: true
     values:
       - network_segment
@@ -70,6 +70,12 @@ in_scope_network_fields:
       condition: present
     validation: equals_vlan_range_computed
     description: "Must equal (vlan_range_end - vlan_range_start + 1)."
+
+  client_asset_list_acknowledged:
+    type: checkbox
+    required: true
+    default: false
+    description: "REQUIRED — The client will provide a complete, clearly labeled inventory of all network assets for this segment no later than 30 days prior to test initiation. Testing of assets not included in the delivered inventory is explicitly out of scope. Undisclosed assets encountered during testing are the client's sole responsibility."
 
   cidr_notation:
     type: cidr

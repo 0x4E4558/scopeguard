@@ -97,6 +97,40 @@ def save_section(row_id: str, section: str, section_data: dict) -> None:
         conn.commit()
 
 
+def migrate_technique_data() -> int:
+    """Fix any engagement where techniques is stored as a flat dict instead of list of dicts.
+    Returns number of engagements fixed."""
+    fixed = 0
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT id, data_json FROM engagements"
+        ).fetchall()
+        for row in rows:
+            data = json.loads(row["data_json"])
+            techs = data.get("techniques")
+            needs_fix = False
+            if isinstance(techs, dict):
+                # Flat dict — try to recover list of dicts from values
+                recovered = [v for v in techs.values() if isinstance(v, dict) and v.get("technique_id")]
+                data["techniques"] = recovered
+                needs_fix = True
+            elif isinstance(techs, list):
+                # Filter out any non-dict items (strings, None, etc.)
+                cleaned = [t for t in techs if isinstance(t, dict) and t.get("technique_id")]
+                if len(cleaned) != len(techs):
+                    data["techniques"] = cleaned
+                    needs_fix = True
+            if needs_fix:
+                conn.execute(
+                    "UPDATE engagements SET data_json = ? WHERE id = ?",
+                    (json.dumps(data), row["id"])
+                )
+                fixed += 1
+        if fixed:
+            conn.commit()
+    return fixed
+
+
 def update_status(row_id: str, status: str) -> None:
     now = datetime.utcnow().isoformat()
     with get_connection() as conn:

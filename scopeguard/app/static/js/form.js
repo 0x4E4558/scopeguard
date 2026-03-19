@@ -46,7 +46,8 @@ const SG = (() => {
   }
 
   async function doSave() {
-    const data = _collectData();
+    // Use SG._collectData if overridden (e.g. technique matrix), else private _collectData
+    const data = (typeof SG !== 'undefined' && SG._collectData) ? SG._collectData() : _collectData();
     try {
       const resp = await fetch(
         `/engagement/${_engId}/section/${_sectionId}/save`,
@@ -299,7 +300,32 @@ const SG = (() => {
     } catch (e) { /* silent */ }
   }
 
+  function _updateBlockIndicator(findings) {
+    const el = document.getElementById('block-count-indicator');
+    if (!el) return;
+    const blocks  = findings.filter(f => f.severity === 'BLOCK').length;
+    const total   = findings.length;
+    if (blocks > 0) {
+      el.textContent = '✗ ' + blocks + ' BLOCK' + (blocks !== 1 ? 'S' : '');
+      el.style.color      = 'var(--sev-block)';
+      el.style.fontWeight = '600';
+      el.title = 'Document generation is blocked — visit Pre-flight Report to resolve';
+    } else if (total > 0) {
+      el.textContent = total + ' finding' + (total !== 1 ? 's' : '');
+      el.style.color      = 'var(--sev-clarify)';
+      el.style.fontWeight = '500';
+      el.title = 'Visit Pre-flight Report to review';
+    } else {
+      el.textContent      = '✓ clean';
+      el.style.color      = 'var(--sev-note)';
+      el.style.fontWeight = '400';
+      el.title            = '';
+    }
+  }
+
   function _updateFindingsPanel(findings) {
+    _updateBlockIndicator(findings);
+
     const body  = document.querySelector('.findings-panel-body');
     const title = document.querySelector('.findings-panel-title');
     if (!body) return;
@@ -309,20 +335,20 @@ const SG = (() => {
 
     if (title) {
       const parts = [];
-      if (counts.BLOCK)   parts.push(`<span style="color:var(--block)">${counts.BLOCK} BLOCK</span>`);
-      if (counts.CLARIFY) parts.push(`<span style="color:var(--clarify)">${counts.CLARIFY} CLARIFY</span>`);
-      if (counts.MISSING) parts.push(`<span style="color:var(--missing)">${counts.MISSING} MISSING</span>`);
-      if (counts.NOTE)    parts.push(`<span style="color:var(--note)">${counts.NOTE} NOTE</span>`);
+      if (counts.BLOCK)   parts.push(`<span style="color:var(--sev-block)">${counts.BLOCK} BLOCK</span>`);
+      if (counts.CLARIFY) parts.push(`<span style="color:var(--sev-clarify)">${counts.CLARIFY} CLARIFY</span>`);
+      if (counts.MISSING) parts.push(`<span style="color:var(--sev-missing)">${counts.MISSING} MISSING</span>`);
+      if (counts.NOTE)    parts.push(`<span style="color:var(--sev-note)">${counts.NOTE} NOTE</span>`);
       title.innerHTML = `<span>findings</span> ${parts.join(' · ') || '<span style="color:var(--text3)">none</span>'}`;
     }
 
-    body.innerHTML = findings.slice(0, 12).map(f => `
+    body.innerHTML = findings.slice(0, 15).map(f => `
       <div class="mini-finding sev-${f.severity}">
         <span class="rule">${f.rule_id}</span>
         <span class="desc">${_esc(f.description)}</span>
       </div>
-    `).join('') + (findings.length > 12
-      ? `<div style="color:var(--text3);font-size:0.72rem;padding:6px 8px">+${findings.length - 12} more — see pre-flight report</div>`
+    `).join('') + (findings.length > 15
+      ? `<div style="color:var(--text3);font-size:0.72rem;padding:6px 8px">+${findings.length - 15} more — see pre-flight report</div>`
       : '');
   }
 
@@ -393,6 +419,8 @@ const SG = (() => {
     init,
     scheduleAutosave,
     doSave,
+    _collectData,        // exposed so technique matrix can override it
+    updateFindings: _updateFindingsPanel,
     saveAndContinue,
     wireNewItem,
   };

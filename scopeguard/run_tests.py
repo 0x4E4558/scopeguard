@@ -675,6 +675,233 @@ def test_milestone_finding_list_summary():
 
 # ─── Runner ───────────────────────────────────────────────────────────────────
 
+
+
+# ─── V2: Form Builder field types ─────────────────────────────────────────────
+
+def test_fb_engagement_type_buttongroup():
+    from app.form_builder import get_section_fields
+    fields = {f["name"]: f for f in get_section_fields("identity")}
+    assert fields["engagement_type"]["type"] == "buttongroup"
+    assert len(fields["engagement_type"]["options"]) == 6
+
+def test_fb_classification_buttongroup():
+    from app.form_builder import get_section_fields
+    fields = {f["name"]: f for f in get_section_fields("identity")}
+    assert fields["classification"]["type"] == "buttongroup"
+    assert "confidential" in fields["classification"]["options"]
+
+def test_fb_device_type_multiselect_in_scope():
+    from app.form_builder import get_section_fields
+    fields = {f["name"]: f for f in get_section_fields("in_scope_assets")}
+    assert fields["device_type"]["type"] == "multiselect"
+    assert len(fields["device_type"]["options"]) >= 20
+
+def test_fb_device_type_multiselect_out_scope():
+    from app.form_builder import get_section_fields
+    fields = {f["name"]: f for f in get_section_fields("out_of_scope_assets")}
+    assert fields["device_type"]["type"] == "multiselect"
+
+def test_fb_authorized_activities_multiselect():
+    from app.form_builder import get_section_fields
+    fields = {f["name"]: f for f in get_section_fields("physical_locations")}
+    assert fields["authorized_activities"]["type"] == "multiselect"
+    assert len(fields["authorized_activities"]["options"]) == 17
+
+def test_fb_all_multiselect_have_options():
+    from app.form_builder import get_section_fields
+    for section in ["identity", "period", "in_scope_assets",
+                    "out_of_scope_assets", "physical_locations"]:
+        for f in get_section_fields(section):
+            if f["type"] == "multiselect":
+                assert f.get("options"), f"[{section}] {f['name']} has no options"
+
+def test_fb_client_asset_acknowledged_field():
+    from app.form_builder import get_section_fields
+    fields = {f["name"]: f for f in get_section_fields("in_scope_assets")}
+    assert "client_asset_list_acknowledged" in fields
+    assert fields["client_asset_list_acknowledged"]["type"] == "checkbox"
+
+def test_fb_techniques_returns_empty():
+    from app.form_builder import get_section_fields
+    assert get_section_fields("techniques") == []
+
+# ─── V2: Technique catalog schema ─────────────────────────────────────────────
+
+def test_technique_schema_has_catalog():
+    import yaml
+    from pathlib import Path
+    schema = yaml.safe_load(
+        (Path("schema") / "techniques.yaml").read_text()
+    )
+    assert "catalog" in schema
+
+def test_technique_schema_seven_categories():
+    import yaml
+    from pathlib import Path
+    schema = yaml.safe_load((Path("schema") / "techniques.yaml").read_text())
+    assert len(schema["catalog"]) == 7
+
+def test_technique_ids_unique():
+    import yaml
+    from pathlib import Path
+    schema = yaml.safe_load((Path("schema") / "techniques.yaml").read_text())
+    ids = [t["id"] for cat in schema["catalog"].values() for t in cat["techniques"]]
+    assert len(ids) == len(set(ids)), "Duplicate technique IDs"
+
+def test_technique_count_at_least_40():
+    import yaml
+    from pathlib import Path
+    schema = yaml.safe_load((Path("schema") / "techniques.yaml").read_text())
+    total = sum(len(c["techniques"]) for c in schema["catalog"].values())
+    assert total >= 40, f"Expected >= 40 techniques, got {total}"
+
+def test_each_technique_has_required_fields():
+    import yaml
+    from pathlib import Path
+    schema = yaml.safe_load((Path("schema") / "techniques.yaml").read_text())
+    for cat_key, cat in schema["catalog"].items():
+        for tech in cat["techniques"]:
+            for field in ("id", "name", "mitre", "nist", "ptes"):
+                assert field in tech, f"{cat_key} technique missing {field!r}: {tech}"
+
+# ─── V2: Physical location activities ─────────────────────────────────────────
+
+def test_physical_activities_snake_case():
+    from app.form_builder import get_section_fields
+    fields = {f["name"]: f for f in get_section_fields("physical_locations")}
+    for opt in fields["authorized_activities"]["options"]:
+        assert " " not in opt, f"Not snake_case: {opt!r}"
+        assert opt == opt.lower(), f"Not lowercase: {opt!r}"
+
+def test_physical_activities_known_items():
+    from app.form_builder import get_section_fields
+    fields = {f["name"]: f for f in get_section_fields("physical_locations")}
+    opts = fields["authorized_activities"]["options"]
+    for expected in ["tailgating_entry", "badge_cloning", "server_room_access",
+                     "soc_access_attempt", "dumpster_reconnaissance"]:
+        assert expected in opts, f"Missing activity: {expected}"
+
+# ─── V2: Document generation ───────────────────────────────────────────────────
+
+def _get_doc_texts():
+    import io, json
+    from pathlib import Path
+    from app.hydrator import hydrate
+    from app.generator import generate_sow, generate_roe
+    from docx import Document
+    data = json.loads((Path("tests/fixtures/mcb.json")).read_text())
+    sections = ["identity","period","contacts","in_scope_assets","out_of_scope_assets",
+                "physical_locations","techniques","maintenance_windows",
+                "data_governance","social_engineering"]
+    eng = hydrate({s: data[s] for s in sections})
+    sow = generate_sow(eng)
+    roe = generate_roe(eng)
+    def doc_text(b):
+        d = Document(io.BytesIO(b))
+        return (" ".join(p.text for p in d.paragraphs) +
+                " ".join(c.text for t in d.tables for r in t.rows
+                         for c in r.cells for p in c.paragraphs))
+    return doc_text(sow), doc_text(roe), sow, roe
+
+def test_gen_sow_non_empty():
+    _, _, sow, _ = _get_doc_texts()
+    assert len(sow) > 10_000
+
+def test_gen_roe_non_empty():
+    _, _, _, roe = _get_doc_texts()
+    assert len(roe) > 10_000
+
+def test_gen_sow_has_device_type_col():
+    sow_text, _, _, _ = _get_doc_texts()
+    assert "Type" in sow_text
+
+def test_gen_sow_has_disclaimer():
+    sow_text, _, _, _ = _get_doc_texts()
+    assert "UNDISCLOSED DEVICE DISCLAIMER" in sow_text
+
+def test_gen_sow_has_cde_section():
+    sow_text, _, _, _ = _get_doc_texts()
+    assert "Cardholder Data Environment" in sow_text
+
+def test_gen_sow_has_physical_activities():
+    sow_text, _, _, _ = _get_doc_texts()
+    assert any(t in sow_text for t in ["Tailgating", "Badge", "Dumpster"])
+
+def test_gen_roe_has_ids_ips():
+    _, roe_text, _, _ = _get_doc_texts()
+    assert "IDS" in roe_text or "IPS" in roe_text
+
+def test_gen_roe_has_maintenance_windows():
+    _, roe_text, _, _ = _get_doc_texts()
+    assert "Maintenance Window" in roe_text
+
+def test_gen_sow_has_confidential():
+    sow_text, _, _, _ = _get_doc_texts()
+    assert "CONFIDENTIAL" in sow_text.upper()
+
+# ─── V2: Route integration ─────────────────────────────────────────────────────
+
+def _setup_test_client():
+    import json
+    from pathlib import Path
+    from app import create_app
+    from app.storage import save_section
+    data = json.loads((Path("tests/fixtures/mcb.json")).read_text())
+    app = create_app()
+    client = app.test_client().__enter__()
+    resp = client.post("/new", follow_redirects=False)
+    eng_id = resp.headers["Location"].split("/")[2]
+    for s in ["identity","period","contacts","in_scope_assets","out_of_scope_assets",
+              "physical_locations","techniques","maintenance_windows",
+              "data_governance","social_engineering"]:
+        save_section(eng_id, s, data[s])
+    return client, eng_id
+
+def test_route_techniques_renders():
+    client, eng_id = _setup_test_client()
+    r = client.get(f"/engagement/{eng_id}/section/techniques")
+    assert r.status_code == 200
+    assert b"tech-category" in r.data
+
+def test_route_techniques_has_7_cats():
+    import re
+    client, eng_id = _setup_test_client()
+    r = client.get(f"/engagement/{eng_id}/section/techniques")
+    cats = re.findall(rb'class="tech-cat-header"', r.data)
+    assert len(cats) == 7
+
+def test_route_identity_has_buttongroup():
+    client, eng_id = _setup_test_client()
+    r = client.get(f"/engagement/{eng_id}/section/identity")
+    assert b"btn-group-option" in r.data
+
+def test_route_physical_starts_expanded():
+    client, eng_id = _setup_test_client()
+    r = client.get(f"/engagement/{eng_id}/section/physical_locations")
+    assert b"display:block" in r.data
+
+def test_route_in_scope_has_30day():
+    client, eng_id = _setup_test_client()
+    r = client.get(f"/engagement/{eng_id}/section/in_scope_assets")
+    assert b"30 days" in r.data or b"client_asset_list_acknowledged" in r.data
+
+def test_route_preflight_renders():
+    client, eng_id = _setup_test_client()
+    r = client.get(f"/engagement/{eng_id}/preflight")
+    assert r.status_code == 200
+
+def test_route_sow_generates():
+    client, eng_id = _setup_test_client()
+    r = client.get(f"/engagement/{eng_id}/generate/sow")
+    assert r.status_code == 200 and len(r.data) > 10_000
+
+def test_route_roe_generates():
+    client, eng_id = _setup_test_client()
+    r = client.get(f"/engagement/{eng_id}/generate/roe")
+    assert r.status_code == 200 and len(r.data) > 10_000
+
+
 ALL_TESTS = [
     # VAL rules
     (test_val001_valid_no_trigger, "VAL-001: valid CIDRs no trigger"),
@@ -771,11 +998,48 @@ ALL_TESTS = [
     (test_milestone_mcb_zero_blockers, "MILESTONE: MCB produces zero BLOCK findings"),
     (test_milestone_nexus_spec_errors_all_detected, "MILESTONE: all Nexus spec errors detected"),
     (test_milestone_finding_list_summary, "MILESTONE: FindingList summary counts correct"),
+    # V2: Form builder
+    (test_fb_engagement_type_buttongroup,    "V2: engagement_type is buttongroup"),
+    (test_fb_classification_buttongroup,     "V2: classification is buttongroup"),
+    (test_fb_device_type_multiselect_in_scope, "V2: in_scope device_type is multiselect"),
+    (test_fb_device_type_multiselect_out_scope,"V2: out_scope device_type is multiselect"),
+    (test_fb_authorized_activities_multiselect,"V2: physical activities is multiselect with 17 opts"),
+    (test_fb_all_multiselect_have_options,   "V2: all multiselect fields have options"),
+    (test_fb_client_asset_acknowledged_field,"V2: client_asset_list_acknowledged field exists"),
+    (test_fb_techniques_returns_empty,       "V2: techniques form_builder returns []"),
+    # V2: Technique catalog
+    (test_technique_schema_has_catalog,      "V2: techniques schema has catalog key"),
+    (test_technique_schema_seven_categories, "V2: catalog has 7 categories"),
+    (test_technique_ids_unique,              "V2: all technique IDs are unique"),
+    (test_technique_count_at_least_40,       "V2: catalog has >= 40 techniques"),
+    (test_each_technique_has_required_fields,"V2: every technique has id/name/mitre/nist/ptes"),
+    # V2: Physical activities
+    (test_physical_activities_snake_case,    "V2: activity options are snake_case"),
+    (test_physical_activities_known_items,   "V2: known activity options present"),
+    # V2: Document generation
+    (test_gen_sow_non_empty,                 "V2: SOW generates non-empty document"),
+    (test_gen_roe_non_empty,                 "V2: ROE generates non-empty document"),
+    (test_gen_sow_has_device_type_col,       "V2: SOW has device type column"),
+    (test_gen_sow_has_disclaimer,            "V2: SOW has undisclosed device disclaimer"),
+    (test_gen_sow_has_cde_section,           "V2: SOW has PCI-DSS CDE section"),
+    (test_gen_sow_has_physical_activities,   "V2: SOW has physical activity list"),
+    (test_gen_roe_has_ids_ips,               "V2: ROE has IDS/IPS status"),
+    (test_gen_roe_has_maintenance_windows,   "V2: ROE has maintenance windows section"),
+    (test_gen_sow_has_confidential,          "V2: SOW has CONFIDENTIAL classification"),
+    # V2: Route integration
+    (test_route_techniques_renders,          "V2: techniques section renders 200"),
+    (test_route_techniques_has_7_cats,       "V2: technique matrix has 7 categories"),
+    (test_route_identity_has_buttongroup,    "V2: identity has buttongroup fields"),
+    (test_route_physical_starts_expanded,    "V2: physical locations start expanded"),
+    (test_route_in_scope_has_30day,          "V2: in_scope has 30-day notice"),
+    (test_route_preflight_renders,           "V2: preflight renders 200"),
+    (test_route_sow_generates,               "V2: SOW generation route works"),
+    (test_route_roe_generates,               "V2: ROE generation route works"),
 ]
 
 
 def main():
-    print(f"\nScopeGuard Phase 1 — Validation Engine Tests")
+    print(f"\nScopeGuard v2 — Complete Test Suite")
     print(f"{'─' * 60}")
 
     for fn, name in ALL_TESTS:

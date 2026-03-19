@@ -53,6 +53,11 @@ def _field_spec(name: str, meta: dict[str, Any]) -> dict[str, Any]:
     if ftype == "enum":
         spec["options"] = meta.get("values", [])
 
+    # Buttongroup type — visible toggle buttons (like multiselect but single-select)
+    if ftype == "buttongroup":
+        spec["options"] = meta.get("values", [])
+        spec["type"] = "buttongroup"
+
     # Direct multiselect type — values listed under "values" key
     if ftype == "multiselect":
         spec["options"] = meta.get("values", [])
@@ -105,6 +110,9 @@ def _field_spec(name: str, meta: dict[str, Any]) -> dict[str, Any]:
 
 def get_section_fields(section_id: str) -> list[dict]:
     """Return ordered field specs for a given section."""
+    # Techniques now uses a custom matrix UI — no standard fields to return
+    if section_id == 'techniques':
+        return []
     loader = SchemaLoader(SCHEMA_DIR)
 
     # Map section IDs to schema group names and field keys

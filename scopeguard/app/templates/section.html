@@ -18,7 +18,7 @@
     </span>
     <div class="topbar-right">
       <span class="save-status" id="save-status"></span>
-      <span id="block-count-indicator" class="mono" style="font-size:0.72rem;"></span>
+      <span id="block-count-indicator" style="font-family:var(--font-mono);font-size:0.75rem;cursor:default;transition:color 0.15s;"></span>
       <a href="/engagement/{{ eng_id }}/preflight" class="btn btn-ghost" style="padding:5px 12px; font-size:0.78rem;">
         Pre-flight Report
       </a>
@@ -65,8 +65,190 @@
       <h1>{{ current_section.label }}</h1>
     </div>
 
+    <!-- ── TECHNIQUE MATRIX ── -->
+    {% if section_id == 'techniques' %}
+    <div id="technique-matrix">
+      <p style="color:var(--text3);font-size:0.83rem;margin-bottom:20px;">
+        Select all techniques authorized for this engagement. Use the category headers to expand each group.
+        Each selected technique will appear in the Rules of Engagement with its authorization status, MITRE ATT&amp;CK mapping, and any conditions.
+      </p>
+
+      {# Compute selected technique IDs from saved data #}
+      {% set selected_ids = [] %}
+      {% if saved_data %}
+        {% for t in saved_data %}
+          {% if selected_ids.append(t.technique_id) %}{% endif %}
+        {% endfor %}
+      {% endif %}
+
+      <form id="section-form" autocomplete="off" onsubmit="return false;">
+      <input type="hidden" name="__technique_matrix__" value="1">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <span style="font-size:0.8rem;color:var(--text3);">
+          Check all techniques authorized for this engagement. Authorization fields appear when a technique is selected.
+          Changes save automatically — use Save &amp; Continue when done.
+        </span>
+        <button type="button" class="btn btn-ghost btn-sm"
+                onclick="SG.doSave().then(()=>{})">
+          Save
+        </button>
+      </div>
+
+      {% for cat_key, cat in technique_catalog.items() %}
+      <div class="tech-category" data-cat="{{ cat_key }}">
+        <div class="tech-cat-header" onclick="toggleTechCat(this)">
+          <span class="item-chevron" style="transition:transform var(--ease);">▶</span>
+          <span class="tech-cat-label">{{ cat.label }}</span>
+          <span class="tech-cat-tactic mono" style="font-size:0.68rem;color:var(--text3);">{{ cat.mitre_tactic }}</span>
+          <span class="tech-cat-count" data-cat="{{ cat_key }}" style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text4);margin-left:auto;">
+            0 / {{ cat.techniques | length }} selected
+          </span>
+        </div>
+        <div class="tech-cat-body" style="display:none;">
+          {% for tech in cat.techniques %}
+          {# Find saved data for this technique #}
+          {% set saved_tech = namespace(found=none) %}
+          {% if saved_data %}
+            {% for t in saved_data %}
+              {% if t.technique_id == tech.id %}
+                {% set saved_tech.found = t %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+          {% set is_selected = tech.id in selected_ids %}
+
+          <div class="tech-row {% if is_selected %}selected{% endif %}" data-tech-id="{{ tech.id }}" data-cat="{{ cat_key }}">
+            <div class="tech-row-main" onclick="toggleTech(this.closest('.tech-row'))">
+              <div class="tech-checkbox">
+                <div class="tech-check-box {% if is_selected %}checked{% endif %}"></div>
+              </div>
+              <div class="tech-row-info">
+                <span class="tech-name">{{ tech.name }}</span>
+                <span class="tech-meta mono">{{ tech.mitre }} · {{ tech.nist }} · {{ tech.ptes }}</span>
+              </div>
+              {% if is_selected %}
+              {% set auth = saved_tech.found.authorization_status if saved_tech.found else 'authorized' %}
+              <span class="item-status-pill status-{{ auth | replace('_','-') }}">{{ auth | replace('_',' ') | title }}</span>
+              {% endif %}
+            </div>
+
+            {# Authorization fields — shown when selected #}
+            <div class="tech-auth-fields" style="display:{% if is_selected %}block{% else %}none{% endif %};">
+              <div class="tech-auth-grid">
+                <div class="field-group" style="margin-bottom:12px;">
+                  <label>Authorization Status <span class="required-mark">*</span></label>
+                  <div class="btn-group-select" data-field="{{ tech.id }}__authorization_status">
+                    <input type="hidden" name="{{ tech.id }}__authorization_status"
+                           value="{{ saved_tech.found.authorization_status if saved_tech.found else 'authorized' }}">
+                    {% for opt in ['authorized','conditional','not_authorized'] %}
+                    <button type="button"
+                            class="btn-group-option {% if (saved_tech.found.authorization_status if saved_tech.found else 'authorized') == opt %}active{% endif %}"
+                            data-value="{{ opt }}"
+                            onclick="selectBtnGroup(this); updateTechStatus(this)">
+                      {{ opt | replace('_',' ') | title }}
+                    </button>
+                    {% endfor %}
+                  </div>
+                </div>
+
+                <div class="field-group cond-field" data-cond-parent="{{ tech.id }}__authorization_status" data-cond-value="conditional"
+                     style="display:{% if saved_tech.found and saved_tech.found.authorization_status == 'conditional' %}block{% else %}none{% endif %}; margin-bottom:12px;">
+                  <label>Conditions <span class="required-mark">*</span>
+                    <span class="field-desc">Specific, actionable language — vague conditions are rejected.</span>
+                  </label>
+                  <textarea name="{{ tech.id }}__conditions" rows="2">{{ saved_tech.found.conditions if saved_tech.found else '' }}</textarea>
+                </div>
+
+                <div class="field-group cond-field" data-cond-parent="{{ tech.id }}__authorization_status" data-cond-value="conditional"
+                     style="display:{% if saved_tech.found and saved_tech.found.authorization_status == 'conditional' %}block{% else %}none{% endif %}; margin-bottom:12px;">
+                  <label>Approval Workflow <span class="required-mark">*</span>
+                    <span class="field-desc">Who approves, by what method, documented where.</span>
+                  </label>
+                  <input type="text" name="{{ tech.id }}__approval_workflow"
+                         value="{{ saved_tech.found.approval_workflow if saved_tech.found else '' }}">
+                </div>
+
+                <div class="field-group" style="margin-bottom:8px;">
+                  <label>
+                    <input type="checkbox" name="{{ tech.id }}__maintenance_window_required"
+                           {% if saved_tech.found and saved_tech.found.maintenance_window_required %}checked{% endif %}
+                           onchange="toggleTechCond(this, '{{ tech.id }}__mw_fields')">
+                    Requires maintenance window
+                  </label>
+                </div>
+                <div id="{{ tech.id }}__mw_fields"
+                     style="display:{% if saved_tech.found and saved_tech.found.maintenance_window_required %}block{% else %}none{% endif %}; margin-bottom:12px; padding-left:16px;">
+                  <div class="field-group" style="margin-bottom:8px;">
+                    <label>Window ID Reference</label>
+                    <input type="text" name="{{ tech.id }}__maintenance_window_ref" placeholder="e.g. MW-001"
+                           value="{{ saved_tech.found.maintenance_window_ref if saved_tech.found else '' }}">
+                  </div>
+                </div>
+
+                <div class="field-group" style="margin-bottom:8px;">
+                  <label>
+                    <input type="checkbox" name="{{ tech.id }}__notification_required"
+                           {% if saved_tech.found and saved_tech.found.notification_required %}checked{% endif %}
+                           onchange="toggleTechCond(this, '{{ tech.id }}__notif_fields')">
+                    Requires advance notification
+                  </label>
+                </div>
+                <div id="{{ tech.id }}__notif_fields"
+                     style="display:{% if saved_tech.found and saved_tech.found.notification_required %}block{% else %}none{% endif %}; margin-bottom:12px; padding-left:16px;">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div class="field-group" style="margin-bottom:0;">
+                      <label>Lead Time (hours)</label>
+                      <input type="number" name="{{ tech.id }}__notification_lead_time_hours" min="1"
+                             value="{{ saved_tech.found.notification_lead_time_hours if saved_tech.found else '' }}">
+                    </div>
+                    <div class="field-group" style="margin-bottom:0;">
+                      <label>Notify Contact</label>
+                      <input type="text" name="{{ tech.id }}__notification_recipient_ref"
+                             value="{{ saved_tech.found.notification_recipient_ref if saved_tech.found else '' }}">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="field-group" style="margin-bottom:0;">
+                  <label>Scope Limitation <span class="field-desc">Optional constraint on where/when this technique applies.</span></label>
+                  <input type="text" name="{{ tech.id }}__scope_limitation"
+                         value="{{ saved_tech.found.scope_limitation if saved_tech.found else '' }}">
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="section-actions" style="margin-top:24px; border-top:1px solid var(--border); padding-top:20px;">
+        <div>
+          {% if prev_sid %}
+          <a href="/engagement/{{ eng_id }}/section/{{ prev_sid }}" class="btn btn-ghost">← Previous</a>
+          {% endif %}
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text3);" id="tech-total-count">0 techniques selected</span>
+          {% if next_sid %}
+          <button type="button" class="btn btn-primary"
+                  onclick="SG.saveAndContinue('/engagement/{{ eng_id }}/section/{{ next_sid }}')">
+            Save &amp; Continue →
+          </button>
+          {% else %}
+          <button type="button" class="btn btn-primary"
+                  onclick="SG.saveAndContinue('/engagement/{{ eng_id }}/preflight')">
+            Save &amp; Run Pre-flight →
+          </button>
+          {% endif %}
+        </div>
+      </div>
+      </form>
+    </div>
+
+    {% elif not is_list_section %}
     <!-- ── FLAT SECTIONS (identity, period, data_governance, social_engineering) ── -->
-    {% if not is_list_section %}
     <form id="section-form" autocomplete="off" onsubmit="return false;">
       <div class="card">
         {% for field in fields %}
@@ -105,6 +287,22 @@
             {% endfor %}
           </div>
 
+          {% elif field.type == 'buttongroup' %}
+          <label>
+            {{ field.label }}
+            {% if field.required %}<span class="required-mark">*</span>{% endif %}
+            {% if field.description %}<span class="field-desc">{{ field.description }}</span>{% endif %}
+          </label>
+          <div class="btn-group-select" data-field="{{ field.name }}">
+            <input type="hidden" name="{{ field.name }}" value="{{ saved_val or '' }}">
+            {% for opt in field.options %}
+            <button type="button" class="btn-group-option {% if saved_val == opt %}active{% endif %}"
+                    data-value="{{ opt }}" onclick="selectBtnGroup(this)">
+              {{ opt | replace('_',' ') | title }}
+            </button>
+            {% endfor %}
+          </div>
+
           {% elif field.type == 'enum' %}
           <label for="field-{{ field.name }}">
             {{ field.label }}
@@ -114,7 +312,7 @@
           <select id="field-{{ field.name }}" name="{{ field.name }}">
             <option value="">— select —</option>
             {% for opt in field.options %}
-            <option value="{{ opt }}" {% if saved_val == opt %}selected{% endif %}>{{ opt }}</option>
+            <option value="{{ opt }}" {% if saved_val == opt %}selected{% endif %}>{{ opt | replace('_',' ') | title }}</option>
             {% endfor %}
           </select>
 
@@ -460,6 +658,17 @@
             <input type="checkbox" name="{{ field.name }}"
                    {% if saved_val == true or saved_val == 'true' %}checked{% endif %}>
           </div>
+          {% elif field.type == 'buttongroup' %}
+          <div class="btn-group-select" data-field="{{ field.name }}">
+            <input type="hidden" name="{{ field.name }}" value="{{ saved_val or '' }}">
+            {% for opt in field.options %}
+            <button type="button" class="btn-group-option {% if saved_val == opt %}active{% endif %}"
+                    data-value="{{ opt }}" onclick="selectBtnGroup(this)">
+              {{ opt | replace('_',' ') | title }}
+            </button>
+            {% endfor %}
+          </div>
+
           {% elif field.type == 'enum' %}
           {% if field.name == 'role' and section_id == 'contacts' %}
           {# Role picker rendered by JS after page load — seed with hidden input #}
@@ -603,6 +812,179 @@
 <script>
   SG.init('{{ eng_id }}', '{{ section_id }}');
 
+  // ── On page load: fetch current validation state ────────────────────────────
+  (function() {
+    fetch('/engagement/{{ eng_id }}/validate')
+      .then(r => r.json())
+      .then(d => { if (d.findings) SG.updateFindings(d.findings); })
+      .catch(function() {});
+  })();
+
+  // ── Technique Matrix ──────────────────────────────────────────────────────
+  {% if section_id == 'techniques' %}
+
+  // Load catalog from Jinja for JS use
+  const TECHNIQUE_CATALOG = {{ technique_catalog | tojson }};
+
+  function toggleTechCat(header) {
+    const body = header.nextElementSibling;
+    const chev = header.querySelector('.item-chevron');
+    const open = body.style.display === 'block';
+    body.style.display = open ? 'none' : 'block';
+    chev.style.transform = open ? '' : 'rotate(90deg)';
+  }
+
+  function toggleTech(row) {
+    const selected = row.classList.toggle('selected');
+    const box = row.querySelector('.tech-check-box');
+    const authFields = row.querySelector('.tech-auth-fields');
+    box.classList.toggle('checked', selected);
+    authFields.style.display = selected ? 'block' : 'none';
+    updateCatCount(row.dataset.cat);
+    updateTotalCount();
+    SG.scheduleAutosave();
+  }
+
+  function updateTechStatus(btn) {
+    const row = btn.closest('.tech-row');
+    if (!row) return;
+    const val = btn.dataset.value;
+    // Update pill
+    let pill = row.querySelector('.item-status-pill');
+    if (!pill) {
+      pill = document.createElement('span');
+      pill.className = 'item-status-pill';
+      row.querySelector('.tech-row-main').appendChild(pill);
+    }
+    pill.className = 'item-status-pill status-' + val.replace(/_/g, '-');
+    pill.textContent = val.replace(/_/g, ' ').replace(/\w/g, c => c.toUpperCase());
+    // Show/hide conditional fields
+    row.querySelectorAll('.cond-field').forEach(f => {
+      const condVal = f.dataset.condValue;
+      f.style.display = (val === condVal) ? 'block' : 'none';
+    });
+    SG.scheduleAutosave();
+  }
+
+  function toggleTechCond(checkbox, targetId) {
+    const target = document.getElementById(targetId);
+    if (target) target.style.display = checkbox.checked ? 'block' : 'none';
+    SG.scheduleAutosave();
+  }
+
+  function updateCatCount(catKey) {
+    const cat = document.querySelector('.tech-category[data-cat="' + catKey + '"]');
+    if (!cat) return;
+    const total = cat.querySelectorAll('.tech-row').length;
+    const sel   = cat.querySelectorAll('.tech-row.selected').length;
+    const counter = cat.querySelector('.tech-cat-count');
+    if (counter) counter.textContent = sel + ' / ' + total + ' selected';
+  }
+
+  function updateTotalCount() {
+    const total = document.querySelectorAll('.tech-row.selected').length;
+    const el = document.getElementById('tech-total-count');
+    if (el) el.textContent = total + ' technique' + (total !== 1 ? 's' : '') + ' selected';
+  }
+
+  // Open categories that have selected techniques on load
+  document.querySelectorAll('.tech-category').forEach(cat => {
+    const hasSelected = cat.querySelector('.tech-row.selected');
+    if (hasSelected) {
+      const header = cat.querySelector('.tech-cat-header');
+      const body   = cat.querySelector('.tech-cat-body');
+      const chev   = cat.querySelector('.item-chevron');
+      if (body) body.style.display = 'block';
+      if (chev) chev.style.transform = 'rotate(90deg)';
+    }
+    updateCatCount(cat.dataset.cat);
+  });
+  updateTotalCount();
+
+  // Override SG collectData for technique matrix
+  SG._origCollectData = SG._collectData;
+  SG._collectData = function() {
+    // Always use the matrix path on the techniques section — don't rely on DOM query
+    const isTechSection = '{{ section_id }}' === 'techniques';
+    if (!isTechSection) return SG._origCollectData();
+    // Extra safety: if no selected rows, return empty array (not flat scrape)
+    const selectedRows = document.querySelectorAll('.tech-row.selected');
+    if (!selectedRows.length) return [];
+
+    const catalog = TECHNIQUE_CATALOG;
+    const techniques = [];
+    document.querySelectorAll('.tech-row.selected').forEach(row => {
+      const tid = row.dataset.tech_id || row.dataset.techId || row.getAttribute('data-tech-id');
+      const catKey = row.dataset.cat;
+      // Find technique in catalog
+      let techMeta = null;
+      if (catalog[catKey]) {
+        techMeta = catalog[catKey].techniques.find(t => t.id === tid);
+      }
+      const get = name => {
+        const el = row.querySelector('[name="' + tid + '__' + name + '"]');
+        return el ? el.value : '';
+      };
+      const getChk = name => {
+        const el = row.querySelector('[name="' + tid + '__' + name + '"]');
+        return el ? el.checked : false;
+      };
+      techniques.push({
+        technique_id: tid,
+        technique_name: techMeta ? techMeta.name : tid,
+        category: catKey,
+        mitre_tactic_id: techMeta ? (catalog[catKey].mitre_tactic || '') : '',
+        mitre_technique_id: techMeta ? (techMeta.mitre || '') : '',
+        nist_800_115_phase: techMeta ? (techMeta.nist || '') : '',
+        ptes_phase: techMeta ? (techMeta.ptes || '') : '',
+        authorization_status: get('authorization_status') || 'authorized',
+        conditions: get('conditions'),
+        approval_workflow: get('approval_workflow'),
+        maintenance_window_required: getChk('maintenance_window_required'),
+        maintenance_window_ref: get('maintenance_window_ref'),
+        notification_required: getChk('notification_required'),
+        notification_lead_time_hours: parseInt(get('notification_lead_time_hours')) || null,
+        notification_recipient_ref: get('notification_recipient_ref'),
+        scope_limitation: get('scope_limitation'),
+        prohibited: false,
+      });
+    });
+    return techniques;
+  };
+  {% endif %}
+
+  // ── Button group select (single-select visible buttons) ─────────────────────
+  function selectBtnGroup(btn) {
+    const group = btn.closest('.btn-group-select');
+    if (!group) return;
+    group.querySelectorAll('.btn-group-option').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const hidden = group.querySelector('input[type="hidden"]');
+    if (hidden) {
+      hidden.value = btn.dataset.value;
+      hidden.dispatchEvent(new Event('change'));
+    }
+    SG.scheduleAutosave();
+  }
+
+  // ── Technique catalog: auto-fill technique_name when catalog item selected ──
+  {% if section_id == 'techniques' %}
+  document.addEventListener('change', function(e) {
+    if (e.target.name === 'technique_catalog_select') {
+      const val = e.target.value;
+      if (!val || val === 'Custom — enter name manually') return;
+      const card = e.target.closest('.list-item');
+      if (!card) return;
+      const nameEl = card.querySelector('[name="technique_name"]');
+      if (nameEl && (!nameEl.value || nameEl.value === nameEl.dataset.autoFilled)) {
+        nameEl.value = val;
+        nameEl.dataset.autoFilled = val;
+        nameEl.dispatchEvent(new Event('input'));
+      }
+    }
+  });
+  {% endif %}
+
   // ── Time-TZ picker: combine HH + MM + TZ into hidden field ─────────────────
   document.querySelectorAll('.time-tz-picker').forEach(function(picker) {
     const hidden = picker.querySelector('.time-tz-hidden');
@@ -617,6 +999,68 @@
     }
     [hh, mm, tz].forEach(function(el) { el.addEventListener('change', update); });
   });
+
+  // ── Technique matrix: autosave on any field change inside the matrix ──────────
+  {% if section_id == 'techniques' %}
+  document.getElementById('section-form').addEventListener('change', function(e) {
+    // Fire autosave whenever any field inside the matrix changes
+    SG.scheduleAutosave();
+  });
+  document.getElementById('section-form').addEventListener('input', function(e) {
+    SG.scheduleAutosave();
+  });
+  {% endif %}
+
+  // ── Period section: inline date ordering validation ─────────────────────────
+  {% if section_id == 'period' %}
+  (function() {
+    function checkDateOrder() {
+      const startEl = document.querySelector('[name="authorized_start_date"]');
+      const endEl   = document.querySelector('[name="authorized_end_date"]');
+      const draftEl = document.querySelector('[name="report_draft_due"]');
+      const finalEl = document.querySelector('[name="report_final_due"]');
+
+      function setError(el, msg) {
+        if (!el) return;
+        el.style.borderColor = msg ? 'var(--sev-block)' : '';
+        el.style.boxShadow   = msg ? '0 0 0 3px rgba(240,100,100,0.15)' : '';
+        let hint = el.nextElementSibling;
+        // Find or create error hint
+        if (!hint || !hint.classList.contains('inline-date-error')) {
+          hint = document.createElement('span');
+          hint.className = 'inline-date-error field-hint';
+          hint.style.color = 'var(--sev-block)';
+          el.parentNode.insertBefore(hint, el.nextSibling);
+        }
+        hint.textContent = msg || '';
+        hint.style.display = msg ? 'block' : 'none';
+      }
+      function clearError(el) { setError(el, ''); }
+
+      if (startEl && endEl && startEl.value && endEl.value) {
+        if (endEl.value <= startEl.value) {
+          setError(endEl, '⚠ End date must be after start date — this will BLOCK generation');
+        } else {
+          clearError(endEl);
+        }
+      }
+      if (draftEl && finalEl && draftEl.value && finalEl.value) {
+        if (finalEl.value <= draftEl.value) {
+          setError(finalEl, '⚠ Final report must be after draft due date — this will BLOCK generation');
+        } else {
+          clearError(finalEl);
+        }
+      }
+    }
+    ['authorized_start_date','authorized_end_date',
+     'report_draft_due','report_final_due'].forEach(name => {
+      const el = document.querySelector(`[name="${name}"]`);
+      if (el) el.addEventListener('change', checkDateOrder);
+    });
+    // Run on load in case dates are already bad
+    checkDateOrder();
+  })();
+  {% endif %}
 
   // ── Identity section: auto-generate engagement ID and SOW reference ─────────
   {% if section_id == 'identity' %}
@@ -1171,6 +1615,25 @@
       ti.placeholder = 'type and press Enter…';
       container.appendChild(ti);
       wrap.appendChild(container);
+
+    } else if (field.type === 'buttongroup') {
+      const group = document.createElement('div');
+      group.className = 'btn-group-select';
+      group.dataset.field = field.name;
+      const hidden = document.createElement('input');
+      hidden.type = 'hidden'; hidden.name = field.name;
+      group.appendChild(hidden);
+      (field.options || []).forEach(o => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-group-option';
+        btn.dataset.value = o;
+        btn.textContent = o.replace(/_/g, ' ').replace(/\w/g, c => c.toUpperCase());
+        btn.onclick = function() { selectBtnGroup(btn); };
+        group.appendChild(btn);
+      });
+      input = hidden;
+      wrap.appendChild(group);
 
     } else if (field.type === 'hidden') {
       input = document.createElement('input');

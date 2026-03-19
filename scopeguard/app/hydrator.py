@@ -162,9 +162,18 @@ def hydrate(data: dict) -> Engagement:
             vlan_range_start=a.get("vlan_range_start"),
             vlan_range_end=a.get("vlan_range_end"),
             vlan_count_stated=a.get("vlan_count_stated"),
+            vlan_id=a.get("vlan_id"),
             delivery_confirmed=bool(a.get("delivery_confirmed", False)),
             delivery_confirmed_date=_d(a.get("delivery_confirmed_date")),
             confirmed_address=a.get("confirmed_address"),
+            device_type=a.get("device_type"),
+            ip_address=a.get("ip_address"),
+            hostname=a.get("hostname"),
+            mac_address=a.get("mac_address"),
+            os_platform=a.get("os_platform"),
+            network_segment=a.get("network_segment"),
+            client_asset_list_acknowledged=bool(a.get("client_asset_list_acknowledged", False)),
+            undisclosed_device_disclaimer=bool(a.get("undisclosed_device_disclaimer", False)),
         )
         for a in data.get("in_scope_assets", [])
         if a.get("asset_name")
@@ -183,6 +192,14 @@ def hydrate(data: dict) -> Engagement:
             third_party_operated=bool(a.get("third_party_operated", False)),
             third_party_name=a.get("third_party_name"),
             regulatory_exclusion=bool(a.get("regulatory_exclusion", False)),
+            third_party_contact_name=a.get("third_party_contact_name"),
+            third_party_contact_phone=a.get("third_party_contact_phone"),
+            third_party_contact_email=a.get("third_party_contact_email"),
+            vlan_id=a.get("vlan_id"),
+            ip_address=a.get("ip_address"),
+            hostname=a.get("hostname"),
+            mac_address=a.get("mac_address"),
+            device_type=a.get("device_type"),
         )
         for a in data.get("out_of_scope_assets", [])
         if a.get("asset_name")
@@ -196,6 +213,7 @@ def hydrate(data: dict) -> Engagement:
             authorized_activities=loc.get("authorized_activities", []),
             pre_notification_required=bool(loc.get("pre_notification_required", False)),
             facility_third_party=bool(loc.get("facility_third_party", False)),
+            location_type=loc.get("location_type"),
             pre_notification_hours=loc.get("pre_notification_hours"),
             pre_notification_contact_ref=loc.get("pre_notification_contact_ref"),
             facility_security_contact=loc.get("facility_security_contact"),
@@ -206,10 +224,16 @@ def hydrate(data: dict) -> Engagement:
     ]
 
     # ── Techniques ────────────────────────────────────────────────────────────
+    # Defensive: techniques data must be a list of dicts.
+    # If it's a plain dict (flat form scrape) or contains non-dict items, skip gracefully.
+    raw_techniques = data.get("techniques", [])
+    if isinstance(raw_techniques, dict):
+        # Old flat-scrape format — iterate values, filter to dicts
+        raw_techniques = [v for v in raw_techniques.values() if isinstance(v, dict)]
     techniques = [
         _make_technique(t)
-        for t in data.get("techniques", [])
-        if t.get("technique_id")
+        for t in raw_techniques
+        if isinstance(t, dict) and t.get("technique_id")
     ]
 
     # ── Maintenance windows ───────────────────────────────────────────────────

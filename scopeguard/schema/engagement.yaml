@@ -31,7 +31,7 @@ fields:
     description: "Full legal name of testing firm as it will appear on signed documents."
 
   engagement_type:
-    type: enum
+    type: buttongroup
     required: true
     values:
       - external_only
@@ -43,7 +43,7 @@ fields:
     description: "Drives conditional field requirements throughout the schema."
 
   classification:
-    type: enum
+    type: buttongroup
     required: true
     values:
       - confidential
