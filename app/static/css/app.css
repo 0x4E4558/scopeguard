@@ -380,7 +380,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.5); cur
 .finding-resolution { font-size: 0.74rem; color: var(--text3); line-height: 1.5; }
 
 /* ── Index Page ───────────────────────────────────────────────────────────── */
-.index-hero { padding: 40px 40px 32px; max-width: 860px; }
+.index-hero { padding: 40px 40px 32px; max-width: 1280px; }
 .index-hero h1 { font-family: var(--font-mono); font-size: 1.4rem; font-weight: 400; letter-spacing: 0; }
 .index-hero p { color: var(--text3); font-size: 0.88rem; max-width: 540px; margin-top: 8px; }
 
