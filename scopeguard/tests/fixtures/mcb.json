@@ -379,8 +379,6 @@
         "application_server"
       ],
       "ip_address": "38.142.1.22",
-      "hostname": "www.meridianbank.example.com",
-      "os_platform": "Ubuntu 22.04 LTS",
       "network_segment": "DMZ",
       "client_asset_list_acknowledged": true,
       "undisclosed_device_disclaimer": true
@@ -397,8 +395,6 @@
         "load_balancer"
       ],
       "ip_address": "38.142.1.23",
-      "hostname": "api.meridianbank.example.com",
-      "os_platform": "Ubuntu 22.04 LTS",
       "network_segment": "DMZ",
       "client_asset_list_acknowledged": true,
       "undisclosed_device_disclaimer": true
@@ -415,9 +411,6 @@
         "database_server"
       ],
       "ip_address": "10.10.10.50",
-      "hostname": "cbs-prod-01.mcb.internal",
-      "mac_address": "AA:BB:CC:DD:EE:01",
-      "os_platform": "Windows Server 2022",
       "network_segment": "CORE-LAN",
       "client_asset_list_acknowledged": true,
       "undisclosed_device_disclaimer": true

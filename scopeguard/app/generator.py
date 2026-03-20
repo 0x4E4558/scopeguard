@@ -600,25 +600,20 @@ def generate_sow(eng: Engagement) -> bytes:
                 if d in _ACRONYMS: return _ACRONYMS[d]
                 return d.replace('_',' ').title()
             device_type = ', '.join(_fmt_dt(d) for d in raw_dt) if isinstance(raw_dt, list)                           else _fmt_dt(raw_dt)
-            mac         = getattr(a, 'mac_address', '') or ''
-            hostname    = getattr(a, 'hostname', '') or ''
             ip_addr     = getattr(a, 'ip_address', '') or ''
             delivery    = a.delivery_method.value if a.delivery_method else ''
-            os_plat  = getattr(a, 'os_platform', '') or ''
             asset_rows.append([
                 a.asset_name,
                 device_type,
                 (a.cidr_notation or '') + (" / " + a.subnet_mask if a.subnet_mask else ""),
-                ip_addr or hostname or '',
+                ip_addr,
                 vlan_str,
-                mac,
-                os_plat,
                 delivery.replace('_', ' '),
                 a.description or "",
             ])
         _make_table(doc,
-            ["Asset / Segment", "Type", "CIDR / Mask", "IP / Host", "VLAN", "MAC", "OS / Platform", "Delivery", "Description"],
-            [1.3, 0.85, 1.05, 1.0, 0.45, 0.9, 0.95, 0.65, 1.3],
+            ["Asset / Segment", "Type", "CIDR / Mask", "IP", "VLAN", "Delivery", "Description"],
+            [1.3, 0.9, 1.1, 0.85, 0.5, 0.7, 1.65],
             asset_rows)
 
         # Undisclosed device disclaimer
@@ -654,7 +649,6 @@ def generate_sow(eng: Engagement) -> bytes:
         for a in eng.out_of_scope_assets:
             vlan_str = str(getattr(a, 'vlan_id', '') or '')
             ip_str   = getattr(a, 'ip_address', '') or getattr(a, 'cidr_notation', '') or ''
-            mac_str  = getattr(a, 'mac_address', '') or ''
             tp_op_name  = getattr(a, 'third_party_name', '') or ''
             tp_cname    = getattr(a, 'third_party_contact_name', '') or ''
             tp_phone    = getattr(a, 'third_party_contact_phone', '') or ''
@@ -668,13 +662,12 @@ def generate_sow(eng: Engagement) -> bytes:
                 a.asset_name,
                 ip_str,
                 vlan_str,
-                mac_str,
                 getattr(a, 'exclusion_reason', '') or '',
                 tp_contact,
             ])
         _make_table(doc,
-            ["Asset", "IP / CIDR", "VLAN", "MAC", "Exclusion Reason", "3rd Party Contact"],
-            [1.4, 1.2, 0.6, 1.0, 1.9, 1.4],
+            ["Asset", "IP / CIDR", "VLAN", "Exclusion Reason", "3rd Party Contact"],
+            [1.4, 1.3, 0.6, 2.1, 1.6],
             oos_rows)
 
         # Regulatory exclusions note

@@ -94,25 +94,10 @@ in_scope_network_fields:
     required: false
     description: "Specific IP address for individual endpoint devices. Leave blank for network segments."
 
-  hostname:
-    type: string
-    required: false
-    description: "Fully qualified or short hostname. Example: webserver01.client.local"
-
-  mac_address:
-    type: string
-    required: false
-    description: "MAC address. Required for client-provisioned endpoints. Format: AA:BB:CC:DD:EE:FF"
-
   network_segment:
     type: string
     required: false
     description: "Network zone or segment name. Example: DMZ, CORP-LAN, PCI-ZONE, GUEST-WIFI"
-
-  os_platform:
-    type: string
-    required: false
-    description: "OS / firmware / platform. Example: Windows Server 2022, Cisco IOS 15.2, Ubuntu 22.04"
 
   description:
     type: string
@@ -161,7 +146,7 @@ in_scope_network_fields:
 
 out_of_scope_network_fields:
   # Inherits all in_scope_network_fields fields (cidr, subnet_mask, ip_address,
-  # mac_address, hostname, vlan_id, device_type, description).
+  # vlan_id, device_type, description).
   # Precise identification is mandatory — vague exclusions are not acceptable.
 
   exclusion_reason:

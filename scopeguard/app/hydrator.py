@@ -167,9 +167,6 @@ def hydrate(data: dict) -> Engagement:
             confirmed_address=a.get("confirmed_address"),
             device_type=a.get("device_type"),
             ip_address=a.get("ip_address"),
-            hostname=a.get("hostname"),
-            mac_address=a.get("mac_address"),
-            os_platform=a.get("os_platform"),
             network_segment=a.get("network_segment"),
             client_asset_list_acknowledged=bool(a.get("client_asset_list_acknowledged", False)),
             undisclosed_device_disclaimer=bool(a.get("undisclosed_device_disclaimer", False)),
@@ -196,8 +193,6 @@ def hydrate(data: dict) -> Engagement:
             third_party_contact_email=a.get("third_party_contact_email"),
             vlan_id=a.get("vlan_id"),
             ip_address=a.get("ip_address"),
-            hostname=a.get("hostname"),
-            mac_address=a.get("mac_address"),
             device_type=a.get("device_type"),
         )
         for a in data.get("out_of_scope_assets", [])

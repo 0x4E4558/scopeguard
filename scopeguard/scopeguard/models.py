@@ -194,9 +194,6 @@ class NetworkAsset:
     # v2 device detail fields
     device_type: Optional[list] = None          # multiselect — list of type strings
     ip_address: Optional[str] = None
-    hostname: Optional[str] = None
-    mac_address: Optional[str] = None
-    os_platform: Optional[str] = None
     network_segment: Optional[str] = None
     client_asset_list_acknowledged: bool = False
     undisclosed_device_disclaimer: bool = False
