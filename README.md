@@ -1,3 +1,10 @@
+****THIS IS A WORK IN PROGRESS****
+-----DO NOT RUN SETUP.SH MORE THAN ONCE ----
+The application does not check for an existing database at the moment, which means it will not migrate data either.
+It causes existing /engagements to not be removable unless you manually edit the database.
+That is in the list of *TODO*
+That should be the next implementation. 
+
 # ScopeGuard v2.0
 **Penetration Test Scope & Rules of Engagement Builder**
 
