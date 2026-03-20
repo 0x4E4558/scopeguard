@@ -203,6 +203,20 @@ def _para_border_bottom(para, color: str = "2E75B6", size: int = 12):
     pPr.append(pBdr)
 
 
+def _set_cell_margins(cell, top: float = 0.04, bottom: float = 0.04,
+                      left: float = 0.08, right: float = 0.08) -> None:
+    """Set internal cell margins (inches → twips) for breathing room."""
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    tcMar = OxmlElement('w:tcMar')
+    for side, val in [('top', top), ('bottom', bottom), ('left', left), ('right', right)]:
+        m = OxmlElement(f'w:{side}')
+        m.set(qn('w:w'), str(int(val * 1440)))
+        m.set(qn('w:type'), 'dxa')
+        tcMar.append(m)
+    tcPr.append(tcMar)
+
+
 def _set_col_width(table, col_idx: int, width_inches: float):
     for row in table.rows:
         row.cells[col_idx].width = Inches(width_inches)
@@ -220,8 +234,9 @@ def _heading(doc, text: str, level: int = 1):
     run.font.size = Pt(13 if level == 1 else 11)
     run.font.name = 'Arial'
     _para_border_bottom(p, color="2E75B6", size=8 if level == 1 else 4)
-    p.paragraph_format.space_before = Pt(12)
-    p.paragraph_format.space_after  = Pt(4)
+    p.paragraph_format.space_before = Pt(16)
+    p.paragraph_format.space_after  = Pt(6)
+    p.paragraph_format.keep_with_next = True
     return p
 
 
@@ -238,7 +253,8 @@ def _body(doc, text: str, bold: bool = False, italic: bool = False, color: Optio
     run.font.size = Pt(10)
     if color:
         run.font.color.rgb = color
-    p.paragraph_format.space_after = Pt(4)
+    p.paragraph_format.space_before = Pt(2)
+    p.paragraph_format.space_after  = Pt(6)
     return p
 
 
@@ -252,26 +268,32 @@ def _bullet(doc, text: str):
 
 
 def _notice_box(doc, text: str):
-    """A shaded notice paragraph (CONFIDENTIAL notice, warnings)."""
-    p = doc.add_paragraph()
+    """A shaded notice box — rendered as a single-cell table for visible background."""
+    tbl = doc.add_table(rows=1, cols=1)
+    tbl.style = 'Table Grid'
+    cell = tbl.rows[0].cells[0]
+    _set_cell_bg(cell, "EBF3FB")          # pale blue wash
+    _set_cell_borders(cell, "2E75B6")     # blue border
+    _set_cell_margins(cell, top=0.06, bottom=0.06, left=0.10, right=0.10)
+    cell.width = Inches(6.5)
+    p = cell.paragraphs[0]
     run = p.add_run(text)
-    run.bold = True
     run.italic = True
     run.font.size = Pt(9)
     run.font.name = 'Arial'
     run.font.color.rgb = MID
-    p.paragraph_format.space_before = Pt(6)
-    p.paragraph_format.space_after  = Pt(6)
-    return p
+    p.paragraph_format.space_before = Pt(0)
+    p.paragraph_format.space_after  = Pt(0)
+    doc.add_paragraph()   # breathing room after the box
 
 
 def _make_table(doc, headers: list[str], col_widths: list[float], data: list[list[str]],
                 zebra: bool = True) -> None:
     """
     Add a formatted table.
-    headers: column header strings
-    col_widths: column widths in inches (must sum to ~7.5 for letter with 0.5" margins each side)
-    data: list of rows, each a list of cell strings
+    headers:    column header strings
+    col_widths: column widths in inches (must sum to 6.5 for Letter with 1" margins each side)
+    data:       list of rows, each a list of cell strings
     """
     table = doc.add_table(rows=1, cols=len(headers))
     table.style = 'Table Grid'
@@ -279,10 +301,11 @@ def _make_table(doc, headers: list[str], col_widths: list[float], data: list[lis
 
     # Header row
     hdr_row = table.rows[0]
-    hdr_row.height = Cm(0.7)
+    hdr_row.height = Cm(0.75)
     for i, (cell, hdr) in enumerate(zip(hdr_row.cells, headers)):
         _set_cell_bg(cell, "1F4E79")
         _set_cell_borders(cell, "1F4E79")
+        _set_cell_margins(cell)
         cell.width = Inches(col_widths[i])
         cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
         p = cell.paragraphs[0]
@@ -300,12 +323,13 @@ def _make_table(doc, headers: list[str], col_widths: list[float], data: list[lis
         for i, (cell, val) in enumerate(zip(row.cells, row_data)):
             _set_cell_bg(cell, fill)
             _set_cell_borders(cell, "CCCCCC")
+            _set_cell_margins(cell)
             cell.width = Inches(col_widths[i])
             cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
             p = cell.paragraphs[0]
             p.alignment = WD_ALIGN_PARAGRAPH.LEFT
             run = p.add_run(str(val) if val is not None else "")
-            run.font.size = Pt(9)
+            run.font.size = Pt(10)
             run.font.name = 'Arial'
 
     doc.add_paragraph()  # spacing after table
@@ -315,7 +339,7 @@ def _signature_table(doc, left_label: str, right_label: str):
     """Two-column signature block."""
     table = doc.add_table(rows=4, cols=2)
     table.style = 'Table Grid'
-    col_w = 3.5
+    col_w = 3.25  # 3.25 + 3.25 = 6.5" — fits within 1" page margins
 
     labels = [
         [left_label,         right_label],
@@ -330,6 +354,7 @@ def _signature_table(doc, left_label: str, right_label: str):
             cell = row.cells[c_idx]
             _set_cell_bg(cell, "F2F2F2" if r_idx == 0 else "FFFFFF")
             _set_cell_borders(cell, "CCCCCC")
+            _set_cell_margins(cell)
             cell.width = Inches(col_w)
             p = cell.paragraphs[0]
             run = p.add_run(lbl)
@@ -341,7 +366,7 @@ def _signature_table(doc, left_label: str, right_label: str):
 
 
 def _cover_table(doc, rows: list[tuple[str, str]]):
-    """Two-column metadata table for document cover."""
+    """Two-column metadata table for document cover. Total width = 6.5"."""
     table = doc.add_table(rows=len(rows), cols=2)
     table.style = 'Table Grid'
     for r_idx, (label, value) in enumerate(rows):
@@ -352,15 +377,17 @@ def _cover_table(doc, rows: list[tuple[str, str]]):
         _set_cell_bg(val_cell, "FFFFFF")
         _set_cell_borders(lbl_cell, "1F4E79")
         _set_cell_borders(val_cell, "CCCCCC")
-        lbl_cell.width = Inches(2.2)
-        val_cell.width = Inches(5.0)
+        _set_cell_margins(lbl_cell)
+        _set_cell_margins(val_cell)
+        lbl_cell.width = Inches(2.0)
+        val_cell.width = Inches(4.5)
         lp = lbl_cell.paragraphs[0]
         lr = lp.add_run(label)
         lr.bold = True; lr.font.color.rgb = WHITE
         lr.font.size = Pt(9); lr.font.name = 'Arial'
         vp = val_cell.paragraphs[0]
         vr = vp.add_run(str(value) if value else "")
-        vr.font.size = Pt(9); vr.font.name = 'Arial'
+        vr.font.size = Pt(10); vr.font.name = 'Arial'
     doc.add_paragraph()
 
 
@@ -498,7 +525,7 @@ def generate_sow(eng: Engagement) -> bytes:
     ]
     if id_.msa_reference:
         meta_rows.insert(2, ("Master Service Agreement", id_.msa_reference))
-    _make_table(doc, ["Field", "Value"], [2.5, 4.5], [[k, v] for k, v in meta_rows])
+    _make_table(doc, ["Field", "Value"], [2.0, 4.5], [[k, v] for k, v in meta_rows])
 
     _subheading(doc, "1.3 Engagement Period")
     start = per.authorized_start_date
@@ -518,7 +545,7 @@ def generate_sow(eng: Engagement) -> bytes:
         period_rows.append(("Blackout Dates", "; ".join(f"{bd.date} ({bd.reason})" for bd in per.blackout_dates)))
     if per.retest_included and per.retest_window_start:
         period_rows.append(("Retest Window", f"{_fmt_date(per.retest_window_start)} – {_fmt_date(per.retest_window_end)}"))
-    _make_table(doc, ["Period", "Value"], [2.5, 4.5], period_rows)
+    _make_table(doc, ["Period", "Value"], [2.0, 4.5], period_rows)
 
     # ── 2. Contacts ────────────────────────────────────────────────────────────
     _heading(doc, "2. Client and Testing Team Contacts")
@@ -539,7 +566,7 @@ def generate_sow(eng: Engagement) -> bytes:
             ])
         _make_table(doc,
             ["Role", "Name", "Title", "Phone", "Email"],
-            [1.8, 1.4, 1.4, 1.2, 1.7],
+            [1.4, 1.2, 1.2, 1.0, 1.7],
             contact_rows)
     else:
         _body(doc, "[No client contacts defined]", italic=True)
@@ -564,7 +591,7 @@ def generate_sow(eng: Engagement) -> bytes:
             tester_rows.append([c.full_name, c.role.replace("_", " ").title(), certs, ips, c.email or ""])
         _make_table(doc,
             ["Name", "Role", "Certifications", "Authorized Source IP(s)", "Contact"],
-            [1.6, 1.2, 1.4, 1.8, 1.5],
+            [1.4, 1.0, 1.3, 1.6, 1.2],
             tester_rows)
     else:
         _body(doc, "[No testing team contacts defined]", italic=True)
@@ -602,18 +629,20 @@ def generate_sow(eng: Engagement) -> bytes:
             device_type = ', '.join(_fmt_dt(d) for d in raw_dt) if isinstance(raw_dt, list)                           else _fmt_dt(raw_dt)
             ip_addr     = getattr(a, 'ip_address', '') or ''
             delivery    = a.delivery_method.value if a.delivery_method else ''
+            # Merge CIDR/Mask and IP into one "Network" cell for a cleaner, narrower table
+            cidr_str = (a.cidr_notation or '') + (" / " + a.subnet_mask if a.subnet_mask else "")
+            net_str  = cidr_str + (" · " + ip_addr if ip_addr and ip_addr != a.cidr_notation else "")
             asset_rows.append([
                 a.asset_name,
                 device_type,
-                (a.cidr_notation or '') + (" / " + a.subnet_mask if a.subnet_mask else ""),
-                ip_addr,
+                net_str,
                 vlan_str,
                 delivery.replace('_', ' '),
                 a.description or "",
             ])
         _make_table(doc,
-            ["Asset / Segment", "Type", "CIDR / Mask", "IP", "VLAN", "Delivery", "Description"],
-            [1.3, 0.9, 1.1, 0.85, 0.5, 0.7, 1.65],
+            ["Asset / Segment", "Type", "Network", "VLAN", "Delivery", "Description"],
+            [1.3, 0.9, 1.6, 0.5, 0.7, 1.5],
             asset_rows)
 
         # Undisclosed device disclaimer
@@ -667,7 +696,7 @@ def generate_sow(eng: Engagement) -> bytes:
             ])
         _make_table(doc,
             ["Asset", "IP / CIDR", "VLAN", "Exclusion Reason", "3rd Party Contact"],
-            [1.4, 1.3, 0.6, 2.1, 1.6],
+            [1.3, 1.1, 0.5, 2.0, 1.6],
             oos_rows)
 
         # Regulatory exclusions note
@@ -747,7 +776,7 @@ def generate_sow(eng: Engagement) -> bytes:
         ]
         _make_table(doc,
             ["Vector", "Status", "Conditions / Notes"],
-            [1.6, 1.2, 4.7],
+            [1.5, 1.1, 3.9],
             [[r[0], r[1], r[2]] for r in se_rows])
 
         # Exclusion table — who is NOT a target
@@ -756,7 +785,7 @@ def generate_sow(eng: Engagement) -> bytes:
             _body(doc, "Explicitly Excluded from SE Targeting:", bold=True)
             _make_table(doc,
                 ["#", "Excluded Individual / Role / Department"],
-                [0.4, 7.1],
+                [0.4, 6.1],
                 [[str(i+1), t] for i, t in enumerate(excluded)])
         else:
             _body(doc,
@@ -812,7 +841,7 @@ def generate_sow(eng: Engagement) -> bytes:
              _fmt_date(per.retest_window_end), "Encrypted email / secure portal"))
     _make_table(doc,
         ["Deliverable", "Description", "Due Date", "Delivery Method"],
-        [1.6, 3.2, 1.2, 1.5],
+        [1.4, 3.0, 1.1, 1.0],
         [[r[0], r[1], r[2], r[3]] for r in deliverable_rows])
 
     # ── 5. Data Governance ─────────────────────────────────────────────────────
@@ -1068,7 +1097,7 @@ def generate_roe(eng: Engagement) -> bytes:
             rows.append([t.technique_name, att_ref, status, conditions])
         _make_table(doc,
             ["Technique", "ATT&CK ID", "Auth", "Conditions / Constraints"],
-            [2.0, 1.3, 1.0, 3.2],
+            [1.9, 1.0, 0.9, 2.7],
             rows)
 
     # ── 3. Prohibited Actions ──────────────────────────────────────────────────
@@ -1123,7 +1152,7 @@ def generate_roe(eng: Engagement) -> bytes:
             ])
         _make_table(doc,
             ["Window ID", "Date", "Time", "Authorized Activities", "IDS/IPS", "SOC"],
-            [0.9, 1.1, 1.4, 2.3, 1.4, 1.0],
+            [0.8, 1.0, 1.2, 2.2, 1.0, 0.3],
             mw_rows)
 
         first_mw = eng.maintenance_windows[0]
@@ -1218,7 +1247,7 @@ def generate_roe(eng: Engagement) -> bytes:
     ]
     _make_table(doc,
         ["Framework", "Reference", "Applicability"],
-        [2.0, 2.0, 3.5],
+        [1.6, 1.6, 3.3],
         framework_rows)
 
     # ── Legal sections ─────────────────────────────────────────────────────────
@@ -1262,7 +1291,7 @@ def generate_roe(eng: Engagement) -> bytes:
         ack_rows = [[c.full_name, c.role.replace("_", " ").title(), "", ""] for c in testers]
         _make_table(doc,
             ["Name", "Role", "Initial", "Date"],
-            [2.5, 2.5, 1.5, 1.0],
+            [2.1, 2.1, 1.5, 0.8],
             ack_rows)
 
     buf = io.BytesIO()

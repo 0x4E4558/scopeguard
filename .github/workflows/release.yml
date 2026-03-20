@@ -1,0 +1,53 @@
+name: Package Release
+
+# Runs on every push to main (and can be triggered manually).
+# Produces scopeguard.zip — a clean archive whose root directory
+# is "scopeguard/", so it extracts correctly instead of the
+# GitHub default "scopeguard-main/" naming.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  package:
+    name: Build scopeguard.zip
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Create scopeguard.zip with correct root directory
+        run: |
+          # git archive with --prefix ensures the archive root is "scopeguard/"
+          # regardless of what GitHub would name it in a raw ZIP download.
+          git archive --format=zip --prefix=scopeguard/ HEAD -o scopeguard.zip
+          echo "Archive size: $(du -h scopeguard.zip | cut -f1)"
+
+      - name: Upload as workflow artifact
+        uses: actions/upload-artifact@v4.4.3
+        with:
+          name: scopeguard
+          path: scopeguard.zip
+          retention-days: 90
+
+      - name: Create or update rolling "latest" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Delete the existing "latest" tag/release if it exists so we can
+          # replace it with an up-to-date archive.
+          gh release delete latest --yes 2>/dev/null || true
+          git tag -d latest 2>/dev/null || true
+          git push origin :refs/tags/latest 2>/dev/null || true
+
+          gh release create latest scopeguard.zip \
+            --title "ScopeGuard — Latest" \
+            --notes "Download **scopeguard.zip** and extract — the root folder will be \`scopeguard/\`." \
+            --latest

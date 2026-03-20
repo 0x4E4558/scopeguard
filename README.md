@@ -7,6 +7,17 @@ There is a definite need for constructive feedback and improvement suggestions h
 Guides you through building a complete, technically validated, legally defensible Scope of Work and Rules of Engagement document pair — catching every ambiguity, missing field, and inconsistency before anything gets signed.
 
 Install & Run
+
+Option A — Download release ZIP (recommended)
+Download scopeguard.zip from the latest release:
+  https://github.com/0x4E4558/scopeguard/releases/latest
+Extract it — the archive root is "scopeguard/", so it expands cleanly.
+
+Option B — Clone with git
+git clone https://github.com/0x4E4558/scopeguard.git
+
+Either way, then:
+cd scopeguard
 # 1. Create venv and install dependencies (run once)
 bash setup.sh
 
