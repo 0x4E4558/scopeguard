@@ -15,7 +15,9 @@ env.bak/
 venv.bak/
 .python-version
 
-# SQLite database files
+# SQLite database files and the data directory
+# (created at runtime by setup.sh — never commit user data)
+data/
 *.db
 *.db-shm
 *.db-wal
