@@ -8,7 +8,7 @@ That should be the next implementation.
 # ScopeGuard v2.0
 **Penetration Test Scope & Rules of Engagement Builder**
 
-A local-only Flask application that guides penetration testing teams through building validated, legally defensible Scope of Work (SOW) and Rules of Engagement (ROE) documents. Every field is validated before a document can be generated. Every ambiguity is caught before anyone signs.
+This aims to be a local-only Flask application that guides penetration testing teams through building validated, legally defensible Scope of Work (SOW) and Rules of Engagement (ROE) documents. Every field is validated before a document can be generated. Every ambiguity is caught before anyone signs. Currently it does call out to Google for fonts upon launch but after that there are no others.
 
 ---
 
