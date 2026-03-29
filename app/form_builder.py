@@ -20,16 +20,26 @@ SCHEMA_DIR = Path(__file__).parent.parent / "schema"
 
 # Section order mirrors the spec's group numbering
 SECTIONS = [
-    ("identity",            "Engagement Identity",        "engagement"),
-    ("period",              "Engagement Period",           "period"),
-    ("contacts",            "Contacts",                   "contacts"),
-    ("in_scope_assets",     "In-Scope Assets",            "assets"),
-    ("out_of_scope_assets", "Out-of-Scope Assets",        "assets"),
-    ("physical_locations",  "Physical Locations",         "assets"),
-    ("techniques",          "Technique Authorization",    "techniques"),
-    ("maintenance_windows", "Maintenance Windows",        "maintenance_windows"),
-    ("data_governance",     "Data Governance",            "data_governance"),
-    ("social_engineering",  "Social Engineering",         "social_engineering"),
+    ("identity",            "Engagement Identity",        "engagement",
+     "Legal parties, document classification, version, and signatory fields."),
+    ("period",              "Engagement Period",           "period",
+     "Authorized testing window, daily hours, blackout dates, and report delivery deadlines."),
+    ("contacts",            "Contacts",                   "contacts",
+     "All personnel required to sign, escalate, halt testing, or receive notifications."),
+    ("in_scope_assets",     "In-Scope Assets",            "assets",
+     "Network ranges, hosts, and systems explicitly authorized for testing."),
+    ("out_of_scope_assets", "Out-of-Scope Assets",        "assets",
+     "Systems and ranges that are strictly off-limits — exclusion reasons are legally binding."),
+    ("physical_locations",  "Physical Locations",         "assets",
+     "Facilities where on-site testing is authorized, with pre-notification requirements."),
+    ("techniques",          "Technique Authorization",    "techniques",
+     "Explicit authorization matrix for all attack techniques, mapped to MITRE ATT&CK."),
+    ("maintenance_windows", "Maintenance Windows",        "maintenance_windows",
+     "Scheduled change windows required before any disruptive technique execution."),
+    ("data_governance",     "Data Governance",            "data_governance",
+     "Evidence handling, encryption standards, retention limits, and disclosure controls."),
+    ("social_engineering",  "Social Engineering",         "social_engineering",
+     "Phishing, vishing, impersonation, and USB drop authorizations with pretext constraints."),
 ]
 
 SECTION_IDS = [s[0] for s in SECTIONS]
@@ -170,6 +180,6 @@ def get_section_fields(section_id: str) -> list[dict]:
 def get_all_sections() -> list[dict]:
     """Return all sections with their metadata."""
     return [
-        {"id": sid, "label": label, "schema_group": sg}
-        for sid, label, sg in SECTIONS
+        {"id": sid, "label": label, "schema_group": sg, "description": desc}
+        for sid, label, sg, desc in SECTIONS
     ]
