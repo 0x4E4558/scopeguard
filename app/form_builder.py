@@ -180,6 +180,6 @@ def get_section_fields(section_id: str) -> list[dict]:
 def get_all_sections() -> list[dict]:
     """Return all sections with their metadata."""
     return [
-        {"id": sid, "label": label, "schema_group": sg}
-        for sid, label, sg in SECTIONS
+        {"id": sid, "label": label, "schema_group": sg, "description": desc}
+        for sid, label, sg, desc in SECTIONS
     ]

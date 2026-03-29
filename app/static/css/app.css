@@ -325,7 +325,7 @@ a:hover       { color: var(--accent-hi); }
 
 /* ── 7. Main ──────────────────────────────────────────────────────────────── */
 
-.main { grid-area: main; padding: 32px 40px; max-width: 860px; }
+.main { grid-area: main; padding: 32px 40px; max-width: var(--max-content); }
 
 .progress-bar-wrap {
   height: 2px;
@@ -915,7 +915,7 @@ input.mono-input { font-family: var(--font-mono); font-size: 0.82rem; letter-spa
 
 /* ── 19. Index Page ───────────────────────────────────────────────────────── */
 
-.index-hero    { padding: 40px 40px 32px; max-width: 1280px; }
+.index-hero    { padding: 40px 40px 32px; max-width: var(--max-content); }
 .index-hero h1 { font-family: var(--font-mono); font-size: 1.4rem; font-weight: 400; }
 .index-hero p  { color: var(--text3); font-size: 0.88rem; max-width: 540px; margin-top: 8px; }
 
@@ -1003,4 +1003,85 @@ kbd {
   20%  { opacity: 1; transform: translateY(0); }
   80%  { opacity: 1; }
   100% { opacity: 0; }
+}
+
+/* ── Pre-flight Alert Banners ─────────────────────────────────────────────── */
+
+.preflight-alert {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--r-lg);
+  font-size: 0.82rem;
+}
+.preflight-alert-block {
+  background: rgba(239, 83, 80, 0.08);
+  border: 1px solid rgba(239, 83, 80, 0.25);
+}
+.preflight-alert-block .alert-label {
+  color: var(--sev-block);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+.preflight-alert-clear {
+  background: rgba(102, 187, 106, 0.08);
+  border: 1px solid rgba(102, 187, 106, 0.25);
+}
+.preflight-alert-clear .alert-label {
+  color: var(--sev-note);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+.alert-body { color: var(--text2); }
+
+/* ── Pre-flight Footer Actions ────────────────────────────────────────────── */
+
+.preflight-info-box {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(102, 187, 106, 0.07);
+  border: 1px solid rgba(102, 187, 106, 0.2);
+  border-radius: var(--r-lg);
+  font-size: 0.78rem;
+  color: var(--text2);
+}
+
+/* ── Severity Legend ──────────────────────────────────────────────────────── */
+
+.legend-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  font-size: 0.78rem;
+}
+.legend-grid span:nth-child(even) { color: var(--text2); }
+
+/* ── Index Page — engagement list content ─────────────────────────────────── */
+
+.index-content {
+  padding: 0 40px 40px;
+  max-width: var(--max-content);
+}
+
+/* ── Index Page — footer strip ────────────────────────────────────────────── */
+
+.index-footer {
+  padding: 0 40px 32px;
+  max-width: var(--max-content);
+}
+.index-footer-note {
+  font-size: 0.72rem;
+  color: var(--text3);
+  font-family: var(--font-mono);
+}
+
+/* ── Section header label (e.g. "section 01 / 10") ───────────────────────── */
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text3);
+  margin-bottom: 4px;
 }

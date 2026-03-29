@@ -12,14 +12,14 @@
   <!-- Top bar -->
   <div class="topbar">
     <a class="topbar-logo" href="/">SCOPE<span>GUARD</span></a>
-    <span style="color:var(--border2);">|</span>
+    <span class="topbar-sep"></span>
     <span class="topbar-eng mono">
       {{ record.data.identity.engagement_id if record.data.get('identity', {}).get('engagement_id') else record.id[:12] + '…' }}
     </span>
     <div class="topbar-right">
       <span class="save-status" id="save-status"></span>
-      <span id="block-count-indicator" style="font-family:var(--font-mono);font-size:0.75rem;cursor:default;transition:color 0.15s;"></span>
-      <a href="/engagement/{{ eng_id }}/preflight" class="btn btn-ghost" style="padding:5px 12px; font-size:0.78rem;">
+      <span id="block-count-indicator" style="font-family:var(--font-mono);font-size:0.75rem;cursor:default;"></span>
+      <a href="/engagement/{{ eng_id }}/preflight" class="btn btn-ghost btn-sm">
         Pre-flight Report
       </a>
     </div>
@@ -47,6 +47,16 @@
         <span>Pre-flight Report</span>
       </a>
     </div>
+
+    <!-- Findings mini-panel — pinned to sidebar bottom -->
+    <div class="findings-panel collapsed">
+      <div class="findings-panel-header">
+        <span class="findings-panel-title">findings</span>
+        <span class="findings-panel-chevron">▲</span>
+      </div>
+      <div class="findings-panel-body"></div>
+    </div>
+
   </nav>
 
   <!-- Main -->
@@ -59,10 +69,13 @@
 
     <!-- Section header -->
     <div style="margin-bottom:24px;">
-      <div style="font-family:var(--mono); font-size:0.7rem; color:var(--text3); margin-bottom:4px;">
+      <div class="section-label">
         section {{ '%02d' % (section_idx + 1) }} / {{ sections | length }}
       </div>
       <h1>{{ current_section.label }}</h1>
+      {% if current_section.description %}
+      <p class="section-desc">{{ current_section.description }}</p>
+      {% endif %}
     </div>
 
     <!-- ── TECHNIQUE MATRIX ── -->
@@ -795,15 +808,6 @@
     {% endif %}
 
   </main>
-</div>
-
-<!-- Floating findings panel -->
-<div class="findings-panel">
-  <div class="findings-panel-header">
-    <span class="findings-panel-title mono">findings</span>
-    <span style="font-family:var(--mono); font-size:0.72rem; color:var(--text3);">▲</span>
-  </div>
-  <div class="findings-panel-body"></div>
 </div>
 
 {% endblock %}

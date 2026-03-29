@@ -7,7 +7,7 @@
   <!-- Top bar -->
   <div class="topbar">
     <a class="topbar-logo" href="/">SCOPE<span>GUARD</span></a>
-    <span style="color:var(--border2);font-size:0.7rem;">|</span>
+    <span class="topbar-sep"></span>
     <span style="font-size:0.78rem; color:var(--text3);">Penetration Test Scope &amp; ROE Builder</span>
   </div>
 
@@ -43,7 +43,7 @@
   </div>
 
   <!-- Engagement list -->
-  <div style="padding: 0 40px 40px; max-width:1200px;">
+  <div class="index-content">
     {% if engagements %}
     <div class="card" style="padding:0; overflow:hidden;">
       <table class="eng-table">
@@ -148,8 +148,8 @@
   </div>
 
   <!-- Footer note -->
-  <div style="padding: 0 40px 32px; max-width:1280px;">
-    <div style="font-size:0.72rem; color:var(--text3); font-family:var(--mono);">
+  <div class="index-footer">
+    <div class="index-footer-note">
       local-only · no network calls · data stored in ./data/scopeguard.db
     </div>
   </div>
