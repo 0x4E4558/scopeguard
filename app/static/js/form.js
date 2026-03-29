@@ -26,6 +26,15 @@ const SG = (() => {
     // dynamically added inputs (new list items) are covered automatically.
     document.addEventListener('change', _onAnyChange);
     document.addEventListener('input',  _onAnyChange);
+
+    // Ctrl/Cmd+S → immediate save
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        clearTimeout(_saveTimer);
+        doSave();
+      }
+    });
   }
 
   function _onAnyChange(e) {
@@ -163,6 +172,15 @@ const SG = (() => {
     if (!el) return;
     el.className = `save-status ${state}`;
     el.textContent = { saving: 'Saving…', saved: 'Saved', error: 'Save failed' }[state] || '';
+    // Clear the indicator once the CSS animation finishes so it doesn't linger
+    if (state === 'saved') {
+      setTimeout(() => {
+        if (el.classList.contains('saved')) {
+          el.className = 'save-status';
+          el.textContent = '';
+        }
+      }, 1900); // slightly longer than the 1.8s sg-saved animation
+    }
   }
 
   // ── Conditional visibility ──────────────────────────────────────────────────

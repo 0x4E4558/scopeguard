@@ -43,29 +43,17 @@
 
     <!-- Header -->
     <div style="margin-bottom:28px;">
-      <div style="font-family:var(--mono); font-size:0.7rem; color:var(--text3); margin-bottom:4px;">
-        pre-flight report
-      </div>
+      <div class="section-label">pre-flight report</div>
       <h1>{{ eng_id_display }}</h1>
       {% if findings.has_blockers() %}
-      <div style="margin-top:10px; display:flex; align-items:center; gap:10px; padding:10px 14px;
-                  background:rgba(239,83,80,0.08); border:1px solid rgba(239,83,80,0.25);
-                  border-radius:var(--radius-lg); font-size:0.82rem;">
-        <span style="color:var(--block); font-family:var(--mono); font-weight:500;">
-          ✗ {{ counts.BLOCK }} BLOCK{{ 's' if counts.BLOCK != 1 else '' }}
-        </span>
-        <span style="color:var(--text2);">
-          — document generation is blocked. Resolve all BLOCK findings before proceeding.
-        </span>
+      <div class="preflight-alert preflight-alert-block">
+        <span class="alert-label">✗ {{ counts.BLOCK }} BLOCK{{ 's' if counts.BLOCK != 1 else '' }}</span>
+        <span class="alert-body">— document generation is blocked. Resolve all BLOCK findings before proceeding.</span>
       </div>
       {% else %}
-      <div style="margin-top:10px; display:flex; align-items:center; gap:10px; padding:10px 14px;
-                  background:rgba(102,187,106,0.08); border:1px solid rgba(102,187,106,0.25);
-                  border-radius:var(--radius-lg); font-size:0.82rem;">
-        <span style="color:var(--note); font-family:var(--mono); font-weight:500;">✓ No blockers</span>
-        <span style="color:var(--text2);">
-          — review remaining findings and proceed to document generation.
-        </span>
+      <div class="preflight-alert preflight-alert-clear">
+        <span class="alert-label">✓ No blockers</span>
+        <span class="alert-body">— review remaining findings and proceed to document generation.</span>
       </div>
       {% endif %}
     </div>
@@ -120,9 +108,7 @@
           <div class="finding-body">
             <div class="finding-desc">{{ f.description }}</div>
             {% if f.field_path %}
-            <div style="font-family:var(--mono); font-size:0.7rem; color:var(--text3); margin:3px 0 6px;">
-              {{ f.field_path }}
-            </div>
+            <div class="finding-path">{{ f.field_path }}</div>
             {% endif %}
             <div class="finding-resolution">{{ f.resolution }}</div>
             {% if f.field_path %}
@@ -137,17 +123,14 @@
             {% endif %}
             {% endfor %}
             {% if section_link.url %}
-            <div style="margin-top:6px;">
+            <div class="finding-goto">
               {% if section_link.role %}
-              <a href="{{ section_link.url }}?highlight={{ section_link.role }}"
-                 style="font-size:0.72rem; color:var(--accent2); text-decoration:none; font-family:var(--mono);">
+              <a href="{{ section_link.url }}?highlight={{ section_link.role }}" class="finding-goto-link">
                 → go to section · add {{ section_link.role | replace('_',' ') }}
               </a>
               {% else %}
-              {# Extract field name from field_path like section.field_name #}
               {% set field_name = f.field_path.split('.')[-1] if '.' in f.field_path else '' %}
-              <a href="{{ section_link.url }}{% if field_name %}?field={{ field_name }}{% endif %}"
-                 style="font-size:0.72rem; color:var(--accent2); text-decoration:none; font-family:var(--mono);">
+              <a href="{{ section_link.url }}{% if field_name %}?field={{ field_name }}{% endif %}" class="finding-goto-link">
                 → go to section{% if field_name %} · fill {{ field_name | replace('_',' ') }}{% endif %}
               </a>
               {% endif %}
@@ -170,30 +153,26 @@
     {% endif %}
 
     <!-- Footer actions -->
-    <div style="margin-top:24px; padding-top:20px; border-top:1px solid var(--border);">
+    <div class="preflight-footer">
 
-      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <div class="preflight-footer-actions">
         <a href="/engagement/{{ eng_id }}/section/identity" class="btn btn-ghost">
           ← Back to Form
         </a>
 
         {% if findings.has_blockers() %}
-        <span style="font-size:0.82rem; color:var(--block); font-family:var(--mono);">
+        <span class="preflight-block-msg">
           Resolve {{ findings.blockers()|length }} BLOCK finding{{ 's' if findings.blockers()|length != 1 }} before generating documents.
         </span>
         {% else %}
-        <a href="/engagement/{{ eng_id }}/generate/sow"
-           class="btn btn-primary"
-           style="display:inline-flex; align-items:center; gap:8px;">
+        <a href="/engagement/{{ eng_id }}/generate/sow" class="btn btn-primary btn-icon">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M2 2h7l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" fill="none"/>
             <path d="M9 2v3h3M4 7h6M4 9.5h6M4 5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
           </svg>
           Download Scope of Work
         </a>
-        <a href="/engagement/{{ eng_id }}/generate/roe"
-           class="btn btn-primary"
-           style="display:inline-flex; align-items:center; gap:8px; background:var(--accent2); border-color:var(--accent2);">
+        <a href="/engagement/{{ eng_id }}/generate/roe" class="btn btn-primary btn-icon btn-roe">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M2 2h7l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" fill="none"/>
             <path d="M9 2v3h3M4 7h6M4 9.5h4M4 5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
@@ -204,13 +183,11 @@
       </div>
 
       {% if not findings.has_blockers() %}
-      <div style="margin-top:12px; padding:10px 14px; background:rgba(102,187,106,0.07);
-                  border:1px solid rgba(102,187,106,0.2); border-radius:var(--radius-lg);
-                  font-size:0.78rem; color:var(--text2);">
+      <div class="preflight-info-box">
         Documents are generated from your validated engagement data.
         Both files are fully formatted Word documents (.docx) ready for review and signature.
         {% if findings.count().CLARIFY > 0 or findings.count().MISSING > 0 %}
-        <strong style="color:var(--clarify);">
+        <strong class="preflight-warn-clarify">
           {{ findings.count().CLARIFY + findings.count().MISSING }} CLARIFY/MISSING finding(s)
           remain — review before sending for signature.
         </strong>
@@ -221,19 +198,17 @@
     </div>
 
     <!-- Severity legend -->
-    <div class="card" style="margin-top:24px; padding:16px 20px;">
-      <div style="font-size:0.72rem; color:var(--text3); margin-bottom:10px; font-family:var(--mono); letter-spacing:0.08em; text-transform:uppercase;">
-        Severity reference
-      </div>
-      <div style="display:grid; grid-template-columns:auto 1fr; gap:8px 16px; font-size:0.78rem;">
+    <div class="card card-legend">
+      <div class="legend-title">Severity reference</div>
+      <div class="legend-grid">
         <span class="finding-badge badge-BLOCK">BLOCK</span>
-        <span style="color:var(--text2);">Document generation cannot proceed. Must be resolved.</span>
+        <span>Document generation cannot proceed. Must be resolved.</span>
         <span class="finding-badge badge-CLARIFY">CLARIFY</span>
-        <span style="color:var(--text2);">Requires explicit written client response before document execution.</span>
+        <span>Requires explicit written client response before document execution.</span>
         <span class="finding-badge badge-MISSING">MISSING</span>
-        <span style="color:var(--text2);">Required field or record is absent. Complete the section.</span>
+        <span>Required field or record is absent. Complete the section.</span>
         <span class="finding-badge badge-NOTE">NOTE</span>
-        <span style="color:var(--text2);">Implicit assumption that should be made explicit. Does not block generation.</span>
+        <span>Implicit assumption that should be made explicit. Does not block generation.</span>
       </div>
     </div>
 
