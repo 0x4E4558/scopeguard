@@ -653,3 +653,85 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.5); cur
 .card-header:has(.badge-CLARIFY) { border-bottom-color: rgba(240,168,74,0.3); }
 .card-header:has(.badge-MISSING) { border-bottom-color: rgba(176,126,212,0.3); }
 .card-header:has(.badge-NOTE)    { border-bottom-color: rgba(92,200,126,0.3); }
+
+/* ── Section Actions Bar (prev / next / save navigation) ─────────────────── */
+.section-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 20px;
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.section-actions-right { display: flex; align-items: center; gap: 12px; }
+
+/* ── Add-item Button ─────────────────────────────────────────────────────── */
+.add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px 16px;
+  background: transparent;
+  border: 1px dashed var(--border2);
+  border-radius: var(--r-md);
+  color: var(--text3);
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all var(--ease);
+}
+.add-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-lo); }
+
+/* ── Topbar Separator ────────────────────────────────────────────────────── */
+.topbar-sep { width: 1px; height: 18px; background: var(--border2); flex-shrink: 0; }
+
+/* ── Section header description ──────────────────────────────────────────── */
+.section-desc {
+  font-size: 0.8rem;
+  color: var(--text3);
+  margin-top: 5px;
+  line-height: 1.55;
+  max-width: 620px;
+}
+
+/* ── Findings Panel Header ───────────────────────────────────────────────── */
+.findings-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--ease);
+}
+.findings-panel-header:hover .findings-panel-title { color: var(--text2); }
+.findings-panel-chevron { color: var(--text4); font-size: 0.6rem; transition: transform var(--ease); }
+.findings-panel:not(.collapsed) .findings-panel-chevron { transform: rotate(180deg); }
+
+/* ── Keyboard shortcut badge ─────────────────────────────────────────────── */
+kbd {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text4);
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  padding: 1px 5px;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+
+/* ── Save toast (brief confirm pulse) ────────────────────────────────────── */
+@keyframes sg-saved {
+  0%   { opacity: 0; transform: translateY(2px); }
+  20%  { opacity: 1; transform: translateY(0); }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+.save-status.saved { animation: sg-saved 1.8s ease forwards; }
