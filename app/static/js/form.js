@@ -9,6 +9,7 @@ const SG = (() => {
   let _engId     = null;
   let _sectionId = null;
   let _saveTimer = null;
+  let _saveInProgress = false;
   let _panelCollapsed = true;
 
   // ── Init ────────────────────────────────────────────────────────────────────
@@ -55,6 +56,8 @@ const SG = (() => {
   }
 
   async function doSave() {
+    if (_saveInProgress) return;
+    _saveInProgress = true;
     // Use SG._collectData if overridden (e.g. technique matrix), else private _collectData
     const data = (typeof SG !== 'undefined' && SG._collectData) ? SG._collectData() : _collectData();
     try {
@@ -76,6 +79,8 @@ const SG = (() => {
     } catch (err) {
       _setStatus('error');
       console.error('Save error:', err);
+    } finally {
+      _saveInProgress = false;
     }
   }
 

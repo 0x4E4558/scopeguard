@@ -13,6 +13,7 @@ Sections save independently so partial work is never lost.
 import sqlite3
 import json
 import uuid
+from contextlib import closing
 from datetime import datetime, date, timezone
 from pathlib import Path
 from typing import Optional
@@ -28,14 +29,14 @@ def _json_serial(obj):
 
 def get_connection() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
 
 
 def init_db() -> None:
-    with get_connection() as conn:
+    with closing(get_connection()) as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS engagements (
                 id           TEXT PRIMARY KEY,
@@ -57,7 +58,7 @@ def create_engagement() -> str:
     """Create a new empty engagement record, return its UUID."""
     row_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
-    with get_connection() as conn:
+    with closing(get_connection()) as conn:
         conn.execute(
             "INSERT INTO engagements (id, created_at, updated_at, data_json) VALUES (?, ?, ?, ?)",
             (row_id, now, now, "{}")
@@ -68,7 +69,7 @@ def create_engagement() -> str:
 
 def load_engagement(row_id: str) -> Optional[dict]:
     """Load a full engagement record. Returns None if not found."""
-    with get_connection() as conn:
+    with closing(get_connection()) as conn:
         row = conn.execute(
             "SELECT * FROM engagements WHERE id = ?", (row_id,)
         ).fetchone()
@@ -81,7 +82,7 @@ def load_engagement(row_id: str) -> Optional[dict]:
 
 def save_section(row_id: str, section: str, section_data: dict) -> None:
     """Save one section of an engagement. Merges into existing data."""
-    with get_connection() as conn:
+    with closing(get_connection()) as conn:
         row = conn.execute(
             "SELECT data_json FROM engagements WHERE id = ?", (row_id,)
         ).fetchone()
@@ -101,7 +102,7 @@ def migrate_technique_data() -> int:
     """Fix any engagement where techniques is stored as a flat dict instead of list of dicts.
     Returns number of engagements fixed."""
     fixed = 0
-    with get_connection() as conn:
+    with closing(get_connection()) as conn:
         rows = conn.execute(
             "SELECT id, data_json FROM engagements"
         ).fetchall()
@@ -133,7 +134,7 @@ def migrate_technique_data() -> int:
 
 def update_status(row_id: str, status: str) -> None:
     now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
-    with get_connection() as conn:
+    with closing(get_connection()) as conn:
         conn.execute(
             "UPDATE engagements SET status = ?, updated_at = ? WHERE id = ?",
             (status, now, row_id)
@@ -144,7 +145,7 @@ def update_status(row_id: str, status: str) -> None:
 def list_engagements() -> list[dict]:
     """Return all engagements with summary fields, most recently updated first."""
     import json as _json
-    with get_connection() as conn:
+    with closing(get_connection()) as conn:
         rows = conn.execute(
             "SELECT id, engagement_id, created_at, updated_at, status, data_json "
             "FROM engagements ORDER BY updated_at DESC"
@@ -178,6 +179,6 @@ def list_engagements() -> list[dict]:
 
 
 def delete_engagement(row_id: str) -> None:
-    with get_connection() as conn:
+    with closing(get_connection()) as conn:
         conn.execute("DELETE FROM engagements WHERE id = ?", (row_id,))
         conn.commit()

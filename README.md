@@ -1,14 +1,7 @@
-****THIS IS A WORK IN PROGRESS****
------DO NOT RUN SETUP.SH MORE THAN ONCE ----
-The application does not check for an existing database at the moment, which means it will not migrate data either.
-It causes existing /engagements to not be removable unless you manually edit the database.
-That is in the list of *TODO*
-That should be the next implementation. 
-
 # ScopeGuard v2.0
 **Penetration Test Scope & Rules of Engagement Builder**
 
-This aims to be a local-only Flask application that guides penetration testing teams through building validated, legally defensible Scope of Work (SOW) and Rules of Engagement (ROE) documents. Every field is validated before a document can be generated. Every ambiguity is caught before anyone signs. Currently it does call out to Google for fonts upon launch but after that there are no others.
+A local-only Flask application that guides penetration testing teams through building validated, legally defensible Scope of Work (SOW) and Rules of Engagement (ROE) documents. Every field is validated before a document can be generated. Every ambiguity is caught before anyone signs. All fonts are served locally — no internet connection required at runtime.
 
 ---
 
@@ -321,9 +314,9 @@ CIDR overlap · Subnet containment · Maintenance window technique references ·
 python3 run_tests.py
 ```
 
-**124 tests** — 0 failures required before shipping any engagement.
+**129 tests** — 0 failures required before shipping any engagement.
 
-Coverage: All 23 field-level rules · All 16 cross-reference rules · Form builder field types · Technique catalog schema integrity · Physical location activity options · Document generation content · Route integration for all 10 sections + preflight + document generation · 3 milestone tests
+Coverage: All 20 field-level rules (VAL-001–VAL-020) · All 16 cross-reference rules (XRF-001–XRF-016) · Form builder field types · Technique catalog schema integrity · Physical location activity options · Document generation content · Route integration for all 10 sections + preflight + document generation · 3 milestone tests
 
 ---
 
@@ -345,6 +338,7 @@ Coverage: All 23 field-level rules · All 16 cross-reference rules · Form build
 │   │   └── index.html       # Engagement list
 │   └── static/
 │       ├── css/app.css      # Design system (steel blue, warm charcoal)
+│       ├── fonts/           # DM Sans + JetBrains Mono (locally hosted)
 │       └── js/form.js       # Auto-save, conditionals, list management
 ├── schema/                  # YAML field definitions — source of truth
 │   ├── engagement.yaml      # Identity, classification, CDE scope
@@ -377,7 +371,7 @@ Coverage: All 23 field-level rules · All 16 cross-reference rules · Form build
 
 ## Data & Privacy
 
-All data is stored locally in `./data/scopeguard.db` (SQLite). No network connections are made at runtime. No data leaves your machine. The Google Fonts stylesheet is loaded from the internet on first page load — replace the `@import` in `app.css` with locally hosted fonts if offline operation is required.
+All data is stored locally in `./data/scopeguard.db` (SQLite). No network connections are made at runtime. No data leaves your machine. All fonts (DM Sans and JetBrains Mono) are served from `app/static/fonts/` — no external requests are made.
 
 ---
 
@@ -394,7 +388,7 @@ All data is stored locally in `./data/scopeguard.db` (SQLite). No network connec
 - Time fields rebuilt as structured 24-hour dropdowns with timezone
 - Engagement ID and SOW reference auto-generated
 - Document headers/footers on every page (classification, page N of M, version)
-- 124 tests (up from 92)
+- 129 tests (up from 92)
 
 **v1.0** — January 2026
 - Initial release: validation engine, intake form, pre-flight report, document generation
