@@ -24,6 +24,20 @@ from scopeguard.models import (
 )
 
 
+def _int(v, default=None):
+    """Safely convert a form value (string, None, or empty string) to int.
+
+    HTML form inputs always arrive as strings. JSON null becomes None.
+    Both must be handled without raising so hydration never silently aborts.
+    """
+    if v is None or v == '':
+        return default
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return default
+
+
 def _d(s) -> date | None:
     if not s:
         return None
@@ -158,10 +172,10 @@ def hydrate(data: dict) -> Engagement:
             description=a.get("description", ""),
             delivery_method=DeliveryMethod(a["delivery_method"])
                 if a.get("delivery_method") else DeliveryMethod.NETWORK_DISCOVERABLE,
-            vlan_range_start=a.get("vlan_range_start"),
-            vlan_range_end=a.get("vlan_range_end"),
-            vlan_count_stated=a.get("vlan_count_stated"),
-            vlan_id=a.get("vlan_id"),
+            vlan_range_start=_int(a.get("vlan_range_start")),
+            vlan_range_end=_int(a.get("vlan_range_end")),
+            vlan_count_stated=_int(a.get("vlan_count_stated")),
+            vlan_id=_int(a.get("vlan_id")),
             delivery_confirmed=bool(a.get("delivery_confirmed", False)),
             delivery_confirmed_date=_d(a.get("delivery_confirmed_date")),
             confirmed_address=a.get("confirmed_address"),
@@ -194,13 +208,7 @@ def hydrate(data: dict) -> Engagement:
             third_party_contact_name=a.get("third_party_contact_name"),
             third_party_contact_phone=a.get("third_party_contact_phone"),
             third_party_contact_email=a.get("third_party_contact_email"),
-            vlan_id=a.get("vlan_id"),
-            ip_address=a.get("ip_address"),
-            hostname=a.get("hostname"),
-            mac_address=a.get("mac_address"),
-            device_type=a.get("device_type"),
-        )
-        for a in data.get("out_of_scope_assets", [])
+            vlan_id=_int(a.get("vlan_id")),
         if a.get("asset_name")
     ]
 
