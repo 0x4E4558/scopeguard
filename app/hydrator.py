@@ -209,6 +209,12 @@ def hydrate(data: dict) -> Engagement:
             third_party_contact_phone=a.get("third_party_contact_phone"),
             third_party_contact_email=a.get("third_party_contact_email"),
             vlan_id=_int(a.get("vlan_id")),
+            ip_address=a.get("ip_address"),
+            hostname=a.get("hostname"),
+            mac_address=a.get("mac_address"),
+            device_type=a.get("device_type"),
+        )
+        for a in data.get("out_of_scope_assets", [])
         if a.get("asset_name")
     ]
 
@@ -221,7 +227,7 @@ def hydrate(data: dict) -> Engagement:
             pre_notification_required=bool(loc.get("pre_notification_required", False)),
             facility_third_party=bool(loc.get("facility_third_party", False)),
             location_type=loc.get("location_type"),
-            pre_notification_hours=loc.get("pre_notification_hours"),
+            pre_notification_hours=_int(loc.get("pre_notification_hours")),
             pre_notification_contact_ref=loc.get("pre_notification_contact_ref"),
             facility_security_contact=loc.get("facility_security_contact"),
             facility_notified=loc.get("facility_notified"),
@@ -250,10 +256,10 @@ def hydrate(data: dict) -> Engagement:
             date=_d(mw.get("date")) or date.today(),
             start_time=mw.get("start_time", "02:00 ET"),
             end_time=mw.get("end_time", "06:00 ET"),
-            pre_notification_hours=mw.get("pre_notification_hours", 4),
+            pre_notification_hours=_int(mw.get("pre_notification_hours"), default=4),
             notification_recipient_ref=mw.get("notification_recipient_ref", ""),
             authorized_activity_refs=mw.get("authorized_activity_refs", []),
-            cancellation_notice_hours=mw.get("cancellation_notice_hours", 2),
+            cancellation_notice_hours=_int(mw.get("cancellation_notice_hours"), default=2),
             required_staffing_client_refs=mw.get("required_staffing_client_refs", []),
             required_staffing_tester_refs=mw.get("required_staffing_tester_refs", []),
         )
@@ -266,13 +272,13 @@ def hydrate(data: dict) -> Engagement:
     data_governance = None
     if dg:
         data_governance = DataGovernance(
-            credential_reporting_window_hours=int(dg.get("credential_reporting_window_hours", 4)),
+            credential_reporting_window_hours=_int(dg.get("credential_reporting_window_hours"), default=4),
             credential_use_policy=CredentialUsePolicy(dg["credential_use_policy"])
                 if dg.get("credential_use_policy") else CredentialUsePolicy.MINIMAL_DEMONSTRATION,
             pii_handling_policy=dg.get("pii_handling_policy", ""),
             evidence_encryption_standard=EncryptionStandard(dg["evidence_encryption_standard"])
                 if dg.get("evidence_encryption_standard") else EncryptionStandard.AES_256,
-            evidence_retention_days=int(dg.get("evidence_retention_days", 30)),
+            evidence_retention_days=_int(dg.get("evidence_retention_days"), default=30),
             evidence_deletion_confirmation=bool(dg.get("evidence_deletion_confirmation", True)),
             data_transfer_method=dg.get("data_transfer_method", ""),
             third_party_disclosure_prohibited=bool(dg.get("third_party_disclosure_prohibited", True)),
@@ -297,7 +303,7 @@ def hydrate(data: dict) -> Engagement:
             excluded_se_targets=se.get("excluded_se_targets", []),
             phishing_target_list_due_date=_d(se.get("phishing_target_list_due_date")),
             phishing_target_departments=se.get("phishing_target_departments", []),
-            phishing_target_max_count=se.get("phishing_target_max_count"),
+            phishing_target_max_count=_int(se.get("phishing_target_max_count")),
             pretext_approval_required=se.get("pretext_approval_required"),
             pretext_approver_ref=se.get("pretext_approver_ref"),
             vishing_targets=se.get("vishing_targets"),
@@ -305,7 +311,7 @@ def hydrate(data: dict) -> Engagement:
             approved_pretexts=se.get("approved_pretexts", []),
             usb_payload_type=UsbPayloadType(upt) if upt else None,
             usb_executable_authorization=se.get("usb_executable_authorization"),
-            usb_recovery_window_hours=se.get("usb_recovery_window_hours"),
+            usb_recovery_window_hours=_int(se.get("usb_recovery_window_hours")),
             usb_location_refs=se.get("usb_location_refs", []),
         )
 

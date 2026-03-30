@@ -423,10 +423,18 @@ def _run_validation(data: dict):
         return Validator(engagement).validate()
     except Exception as e:
         import traceback
-        app.logger.warning(f"Validation error (returning empty findings): {e}")
+        app.logger.warning(f"Validation error: {e}")
         app.logger.debug(traceback.format_exc())
-        from scopeguard.finding import FindingList
-        return FindingList()
+        from scopeguard.finding import FindingList, Finding, Severity
+        fl = FindingList()
+        fl.add(Finding(
+            rule_id="SYS-001",
+            severity=Severity.BLOCK,
+            description=f"Internal validation error — engagement data could not be processed: {e}",
+            resolution="Check the server log for a full traceback. This is usually caused by "
+                       "corrupted or partially-saved section data. Re-save each section to recover.",
+        ))
+        return fl
 
 
 def _serialize_findings(findings) -> list[dict]:
