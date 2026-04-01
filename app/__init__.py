@@ -276,7 +276,7 @@ def generate_document(eng_id, doc_type):
             "token":  artifact.token,
             "audit":  artifact.audit,
         })
-    except (ScopeCompilationError, Exception):
+    except (ScopeCompilationError, ValueError, TypeError):
         # Scope compilation is best-effort during document generation;
         # documents are still generated without scope binding if it fails.
         scope_binding = None
@@ -334,8 +334,8 @@ def scope_artifact(eng_id):
         engagement = hydrate(record["data"])
         timestamp = datetime.now(timezone.utc).replace(tzinfo=None)
         artifact = compile_scope(engagement, timestamp, _get_hmac_key())
-    except ScopeCompilationError as exc:
-        return jsonify({"error": "Scope compilation error", "detail": str(exc)}), 422
+    except ScopeCompilationError:
+        return jsonify({"error": "Scope compilation error", "detail": "One or more required engagement fields are missing or invalid."}), 422
 
     save_scope_artifact(eng_id, {
         "scope_id":   artifact.scope_id,
@@ -357,8 +357,9 @@ def scope_artifact(eng_id):
 def nex_export(eng_id):
     """Write the full scope artifact set to the Nex artifact directory layout.
 
-    Writes to /var/lib/nex/artifacts/<scope_id>/ by default.
-    Returns a JSON manifest describing what was written.
+    Writes to the configured Nex artifacts directory (default:
+    /var/lib/nex/artifacts, overridable via SCOPEGUARD_NEX_ARTIFACTS_DIR env
+    var).  Returns a JSON manifest describing what was written.
     """
     record = load_engagement(eng_id)
     if record is None:
@@ -373,26 +374,21 @@ def nex_export(eng_id):
         }), 422
 
     from app.hydrator import hydrate
-    from app.nex_export import export_to_nex, DEFAULT_NEX_ARTIFACTS_DIR
+    from app.nex_export import export_to_nex
     from scopeguard.scope_compiler import compile_scope, ScopeCompilationError
-
-    # Allow test/dev override of the output path via request JSON body
-    body = request.get_json(silent=True) or {}
-    base_path_str = body.get("base_path")
-    from pathlib import Path as _Path
-    base_path = _Path(base_path_str) if base_path_str else None
 
     try:
         engagement = hydrate(record["data"])
         timestamp = datetime.now(timezone.utc).replace(tzinfo=None)
         artifact = compile_scope(engagement, timestamp, _get_hmac_key())
-    except ScopeCompilationError as exc:
-        return jsonify({"error": "Scope compilation error", "detail": str(exc)}), 422
+    except ScopeCompilationError:
+        return jsonify({"error": "Scope compilation error", "detail": "One or more required engagement fields are missing or invalid."}), 422
 
     try:
-        manifest = export_to_nex(artifact, timestamp, base_path=base_path)
-    except OSError as exc:
-        return jsonify({"error": "Nex export failed", "detail": str(exc)}), 500
+        manifest = export_to_nex(artifact, timestamp)
+    except OSError:
+        return jsonify({"error": "Nex export failed",
+                        "detail": "Unable to write to the Nex artifact directory."}), 500
 
     # Also persist in DB
     save_scope_artifact(eng_id, {

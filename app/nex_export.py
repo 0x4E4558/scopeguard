@@ -30,7 +30,9 @@ from typing import Any
 from scopeguard.canonicalize import canonical_json
 from scopeguard.scope_compiler import ScopeArtifact
 
-DEFAULT_NEX_ARTIFACTS_DIR = Path("/var/lib/nex/artifacts")
+DEFAULT_NEX_ARTIFACTS_DIR = Path(
+    os.environ.get("SCOPEGUARD_NEX_ARTIFACTS_DIR", "/var/lib/nex/artifacts")
+)
 
 # Version index schema
 VERSION_INDEX_SCHEMA = "1.0"
@@ -95,33 +97,43 @@ def export_to_nex(
     audit_path   = root / "audit.json"
     index_path   = root / "version_index.json"
 
-    # ── Write scope.json (fail if it already exists — append-only model) ──────
-    # A scope_id must only be written once; re-compilation of the same
-    # engagement produces a new scope_id (different timestamp propagates
-    # through the token but not the scope_id, which is engagement-keyed).
-    # If scope.json already exists and has the same scope_hash, skip.
-    # If it has a different scope_hash, this is an amendment — a new version.
-    scope_written = False
+    # ── Write scope.json (append-only model) ──────────────────────────────────
+    # If scope.json already exists with the same scope_hash, the artifact is
+    # identical — return the existing manifest entry from version_index without
+    # writing any new files or creating a new version index entry.
+    # If scope_hash differs, this is an amendment: write to a versioned path.
+    version_index = _load_version_index(index_path)
     if scope_path.exists():
         with open(scope_path, encoding="utf-8") as fh:
             existing = json.load(fh)
-        if existing.get("scope_hash") != artifact.scope_hash:
-            # Content changed — treat as amendment; write to versioned path
-            version_n = len(_load_version_index(index_path)["versions"])
-            scope_path  = root / f"scope.v{version_n}.json"
-            token_path  = root / f"scope_token.v{version_n}.json"
-            audit_path  = root / f"audit.v{version_n}.json"
-            scope_written = True
-    else:
-        scope_written = True
+        if existing.get("scope_hash") == artifact.scope_hash:
+            # Identical content already on disk — no-op, return existing entry
+            last_version = version_index["versions"][-1] if version_index["versions"] else {}
+            return {
+                "scope_id":     artifact.scope_id,
+                "scope_hash":   artifact.scope_hash,
+                "operator_id":  artifact.operator_id,
+                "artifact_dir": str(root),
+                "files": {
+                    "scope":         str(scope_path),
+                    "token":         str(token_path),
+                    "audit":         str(audit_path),
+                    "version_index": str(index_path),
+                },
+                "version_index": last_version.get("version_index", 0),
+                "timestamp":     timestamp.isoformat(),
+            }
+        # Content changed — write amendment to a versioned path
+        version_n = len(version_index["versions"])
+        scope_path  = root / f"scope.v{version_n}.json"
+        token_path  = root / f"scope_token.v{version_n}.json"
+        audit_path  = root / f"audit.v{version_n}.json"
 
-    if scope_written:
-        _canonical_write(scope_path, artifact.scope)
-        _canonical_write(token_path, artifact.token)
-        _canonical_write(audit_path, artifact.audit)
+    _canonical_write(scope_path, artifact.scope)
+    _canonical_write(token_path, artifact.token)
+    _canonical_write(audit_path, artifact.audit)
 
-    # ── Update version_index.json (always, append-only) ───────────────────────
-    version_index = _load_version_index(index_path)
+    # ── Update version_index.json (append-only) ───────────────────────────────
     version_index["schema_version"] = VERSION_INDEX_SCHEMA
     version_index["scope_id"] = artifact.scope_id
 
