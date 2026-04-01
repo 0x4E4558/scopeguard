@@ -397,8 +397,18 @@ def _contact_display(contact) -> str:
 # SOW GENERATOR
 # ══════════════════════════════════════════════════════════════════════════════
 
-def generate_sow(eng: Engagement) -> bytes:
-    """Generate the Scope of Work document. Returns bytes."""
+def generate_sow(eng: Engagement, scope_binding: dict | None = None) -> bytes:
+    """Generate the Scope of Work document. Returns bytes.
+
+    Args:
+        eng:           Validated Engagement object.
+        scope_binding: Optional dict from :func:`scopeguard.scope_compiler.compile_scope`
+                       with keys ``scope_id``, ``scope_hash``, and ``operator_id``.
+                       When provided, these values are embedded in the document
+                       header table and in Section 1.2 (Engagement Identification)
+                       to cryptographically link the human-readable document to
+                       the machine-enforceable scope.json.
+    """
     doc = DocxDocument()
 
     # ── Page setup ─────────────────────────────────────────────────────────────
@@ -447,7 +457,11 @@ def generate_sow(eng: Engagement) -> bytes:
         ("Prepared By",          id_.prepared_by),
         ("Prepared Date",        _fmt_date(id_.prepared_date)),
         ("Document Status",      id_.document_status.value.upper().replace("_", " ")),
-    ])
+    ] + ([
+        ("Scope ID",             scope_binding["scope_id"]),
+        ("Scope Hash (SHA-256)", scope_binding["scope_hash"]),
+        ("Operator ID (SHA-256)", scope_binding["operator_id"]),
+    ] if scope_binding else []))
 
     _notice_box(doc,
         "NOTICE: This document contains sensitive security information. "
@@ -498,6 +512,12 @@ def generate_sow(eng: Engagement) -> bytes:
     ]
     if id_.msa_reference:
         meta_rows.insert(2, ("Master Service Agreement", id_.msa_reference))
+    if scope_binding:
+        meta_rows += [
+            ("Scope ID",              scope_binding["scope_id"]),
+            ("Scope Hash (SHA-256)",  scope_binding["scope_hash"]),
+            ("Operator ID (SHA-256)", scope_binding["operator_id"]),
+        ]
     _make_table(doc, ["Field", "Value"], [2.5, 4.5], [[k, v] for k, v in meta_rows])
 
     _subheading(doc, "1.3 Engagement Period")
@@ -897,8 +917,16 @@ def generate_sow(eng: Engagement) -> bytes:
 # ROE GENERATOR
 # ══════════════════════════════════════════════════════════════════════════════
 
-def generate_roe(eng: Engagement) -> bytes:
-    """Generate the Rules of Engagement document. Returns bytes."""
+def generate_roe(eng: Engagement, scope_binding: dict | None = None) -> bytes:
+    """Generate the Rules of Engagement document. Returns bytes.
+
+    Args:
+        eng:           Validated Engagement object.
+        scope_binding: Optional dict from :func:`scopeguard.scope_compiler.compile_scope`
+                       with keys ``scope_id``, ``scope_hash``, and ``operator_id``.
+                       When provided, these values are embedded in the cover table
+                       to cryptographically link the ROE to scope.json.
+    """
     doc = DocxDocument()
 
     section = doc.sections[0]
@@ -944,7 +972,11 @@ def generate_roe(eng: Engagement) -> bytes:
         ("Effective Date",      _fmt_date(per.authorized_start_date)),
         ("Expiration Date",     _fmt_date(per.retest_window_end or per.authorized_end_date)),
         ("Classification",      f"{id_.classification.value.upper()} — RESTRICTED"),
-    ])
+    ] + ([
+        ("Scope ID",             scope_binding["scope_id"]),
+        ("Scope Hash (SHA-256)", scope_binding["scope_hash"]),
+        ("Operator ID (SHA-256)", scope_binding["operator_id"]),
+    ] if scope_binding else []))
 
     _notice_box(doc,
         "This Rules of Engagement document defines the operational constraints, "

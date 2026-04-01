@@ -5,9 +5,14 @@ SQLite persistence layer for ScopeGuard engagements.
 
 Schema:
   engagements(id, engagement_id, created_at, updated_at, status, data_json)
+  scope_artifacts(id, row_id, scope_id, scope_hash, operator_id,
+                  version_index, supersedes, created_at, artifact_json)
 
 'data_json' stores the full engagement as a JSON blob, keyed by section.
 Sections save independently so partial work is never lost.
+
+'artifact_json' stores the full ScopeArtifact (scope, token, audit) as a
+JSON blob.  Rows are append-only; existing rows are never updated.
 """
 
 import sqlite3
@@ -50,6 +55,28 @@ def init_db() -> None:
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_engagement_id
             ON engagements(engagement_id)
+        """)
+        # Append-only scope artifact versioning table (Phase 9)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS scope_artifacts (
+                id            TEXT PRIMARY KEY,
+                row_id        TEXT NOT NULL,
+                scope_id      TEXT NOT NULL,
+                scope_hash    TEXT NOT NULL,
+                operator_id   TEXT NOT NULL,
+                version_index INTEGER NOT NULL,
+                supersedes    TEXT,
+                created_at    TEXT NOT NULL,
+                artifact_json TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_scope_artifacts_row_id
+            ON scope_artifacts(row_id)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_scope_artifacts_scope_id
+            ON scope_artifacts(scope_id)
         """)
         conn.commit()
 
@@ -178,7 +205,79 @@ def list_engagements() -> list[dict]:
     return results
 
 
+def save_scope_artifact(row_id: str, artifact_data: dict) -> str:
+    """Append a new scope artifact version for engagement *row_id*.
+
+    This function is append-only: it never modifies an existing artifact row.
+    Each call creates a new immutable record.
+
+    Args:
+        row_id:        SQLite primary key of the parent engagement record.
+        artifact_data: Dict with keys: scope_id, scope_hash, operator_id,
+                       scope (dict), token (dict), audit (dict).
+
+    Returns:
+        The new artifact record's UUID primary key.
+    """
+    scope_id    = artifact_data["scope_id"]
+    scope_hash  = artifact_data["scope_hash"]
+    operator_id = artifact_data["operator_id"]
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+
+    with closing(get_connection()) as conn:
+        # Determine current version_index and supersedes
+        existing = conn.execute(
+            "SELECT version_index, scope_hash FROM scope_artifacts "
+            "WHERE row_id = ? ORDER BY version_index DESC LIMIT 1",
+            (row_id,)
+        ).fetchone()
+
+        if existing is None:
+            version_index = 0
+            supersedes = None
+        else:
+            version_index = existing["version_index"] + 1
+            supersedes = existing["scope_hash"]
+
+        artifact_id = str(uuid.uuid4())
+        conn.execute(
+            """INSERT INTO scope_artifacts
+               (id, row_id, scope_id, scope_hash, operator_id,
+                version_index, supersedes, created_at, artifact_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                artifact_id, row_id, scope_id, scope_hash, operator_id,
+                version_index, supersedes, now,
+                json.dumps(artifact_data, default=_json_serial),
+            ),
+        )
+        conn.commit()
+    return artifact_id
+
+
+def load_scope_artifacts(row_id: str) -> list[dict]:
+    """Return all scope artifact versions for *row_id*, oldest first."""
+    with closing(get_connection()) as conn:
+        rows = conn.execute(
+            "SELECT * FROM scope_artifacts WHERE row_id = ? ORDER BY version_index ASC",
+            (row_id,)
+        ).fetchall()
+    results = []
+    for r in rows:
+        entry = dict(r)
+        entry["artifact"] = json.loads(entry.pop("artifact_json"))
+        results.append(entry)
+    return results
+
+
+def load_latest_scope_artifact(row_id: str) -> Optional[dict]:
+    """Return the most recent scope artifact for *row_id*, or None."""
+    artifacts = load_scope_artifacts(row_id)
+    return artifacts[-1] if artifacts else None
+
+
 def delete_engagement(row_id: str) -> None:
     with closing(get_connection()) as conn:
+        conn.execute("DELETE FROM scope_artifacts WHERE row_id = ?", (row_id,))
         conn.execute("DELETE FROM engagements WHERE id = ?", (row_id,))
         conn.commit()
