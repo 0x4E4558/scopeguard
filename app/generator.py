@@ -11,7 +11,7 @@ Uses python-docx. Mirrors the structure of the MCB sample documents.
 
 from __future__ import annotations
 import io
-import logging
+import os
 from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
@@ -29,7 +29,6 @@ from scopeguard.models import (
 )
 from app.legal import get_sow_legal_clauses, get_roe_legal_clauses
 
-log = logging.getLogger(__name__)
 
 # ── Colour palette ─────────────────────────────────────────────────────────────
 DARK   = RGBColor(0x1a, 0x1a, 0x2e)   # near-black for headings
@@ -396,50 +395,6 @@ def _contact_display(contact) -> str:
     return ", ".join(p for p in parts if p)
 
 
-def _write_and_invoke_bridge(
-    eng: Engagement,
-    docx_bytes: bytes,
-    output_path: Path,
-    counterpart_suffix: str,
-) -> None:
-    """Write *docx_bytes* to *output_path* and call the Nex bridge.
-
-    Determines the counterpart document path from *output_path* by replacing
-    the document-type suffix (``-sow.docx`` / ``-roe.docx``).  When both
-    files are present on disk, invokes
-    :func:`app.nex_bridge.write_policy_bundle`.
-
-    Errors are logged and suppressed so that document delivery is never
-    blocked by a bridge failure.
-    """
-    try:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_bytes(docx_bytes)
-    except OSError as exc:
-        log.warning("generator: could not write .docx to disk (%s): %s", output_path, exc)
-        return
-
-    # Derive the other document's path: replace the current suffix with its counterpart.
-    current_suffix = "-sow.docx" if counterpart_suffix == "-roe.docx" else "-roe.docx"
-    counterpart_path = output_path.parent / (
-        output_path.name[: -len(current_suffix)] + counterpart_suffix
-    )
-
-    if not counterpart_path.exists():
-        return
-
-    sow_path = output_path if current_suffix == "-sow.docx" else counterpart_path
-    roe_path = output_path if current_suffix == "-roe.docx" else counterpart_path
-
-    try:
-        from app.nex_bridge import write_policy_bundle
-        write_policy_bundle(eng, sow_path, roe_path)
-    except ImportError:
-        log.debug("nex_bridge not available; skipping policy bundle write")
-    except Exception as exc:
-        log.warning("generator: policy bundle write failed: %s", exc)
-
-
 # ══════════════════════════════════════════════════════════════════════════════
 # SOW GENERATOR
 # ══════════════════════════════════════════════════════════════════════════════
@@ -456,10 +411,6 @@ def generate_sow(eng: Engagement, scope_binding: dict | None = None,
                        header table and in Section 1.2 (Engagement Identification)
                        to cryptographically link the human-readable document to
                        the machine-enforceable scope.json.
-        output_path:   Optional path to write the .docx file on disk.  When
-                       provided, the file is written atomically and
-                       :func:`app.nex_bridge.write_policy_bundle` is invoked
-                       once both the SOW and ROE are present on disk.
     """
     doc = DocxDocument()
 
@@ -962,12 +913,18 @@ def generate_sow(eng: Engagement, scope_binding: dict | None = None,
 
     buf = io.BytesIO()
     doc.save(buf)
-    docx_bytes = buf.getvalue()
+    sow_bytes = buf.getvalue()
 
     if output_path is not None:
-        _write_and_invoke_bridge(eng, docx_bytes, output_path, counterpart_suffix="-roe.docx")
+        output_path.write_bytes(sow_bytes)
+        roe_path = output_path.parent / os.path.basename(
+            output_path.name.replace("-sow.docx", "-roe.docx")
+        )
+        if roe_path.exists():
+            from app.nex_bridge import write_policy_bundle
+            write_policy_bundle(eng, output_path, roe_path)
 
-    return docx_bytes
+    return sow_bytes
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -984,10 +941,6 @@ def generate_roe(eng: Engagement, scope_binding: dict | None = None,
                        with keys ``scope_id``, ``scope_hash``, and ``operator_id``.
                        When provided, these values are embedded in the cover table
                        to cryptographically link the ROE to scope.json.
-        output_path:   Optional path to write the .docx file on disk.  When
-                       provided, the file is written atomically and
-                       :func:`app.nex_bridge.write_policy_bundle` is invoked
-                       once both the SOW and ROE are present on disk.
     """
     doc = DocxDocument()
 
@@ -1368,9 +1321,15 @@ def generate_roe(eng: Engagement, scope_binding: dict | None = None,
 
     buf = io.BytesIO()
     doc.save(buf)
-    docx_bytes = buf.getvalue()
+    roe_bytes = buf.getvalue()
 
     if output_path is not None:
-        _write_and_invoke_bridge(eng, docx_bytes, output_path, counterpart_suffix="-sow.docx")
+        output_path.write_bytes(roe_bytes)
+        sow_path = output_path.parent / os.path.basename(
+            output_path.name.replace("-roe.docx", "-sow.docx")
+        )
+        if sow_path.exists():
+            from app.nex_bridge import write_policy_bundle
+            write_policy_bundle(eng, sow_path, output_path)
 
-    return docx_bytes
+    return roe_bytes

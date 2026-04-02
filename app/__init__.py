@@ -33,9 +33,6 @@ app = Flask(__name__, template_folder="templates", static_folder="static")
 # a local single-user tool).
 app.secret_key = os.environ.get("SCOPEGUARD_SECRET_KEY") or secrets.token_hex(32)
 
-# Directory where generated .docx files are persisted so nex_bridge can read them.
-_DOCS_DIR = Path(__file__).parent.parent / "data" / "docs"
-
 
 def _json_serial(obj):
     if isinstance(obj, (date, datetime)):
@@ -284,15 +281,18 @@ def generate_document(eng_id, doc_type):
         # documents are still generated without scope binding if it fails.
         scope_binding = None
 
+    _DOCS_DIR = Path(__file__).parent.parent / "data" / "docs"
+    _DOCS_DIR.mkdir(parents=True, exist_ok=True)
+
     if doc_type == "sow":
-        output_path = _DOCS_DIR / f"{eng_id}-sow.docx"
+        sow_path = _DOCS_DIR / f"{eng_id}-sow.docx"
         docx_bytes = generate_sow(engagement, scope_binding=scope_binding,
-                                  output_path=output_path)
+                                  output_path=sow_path)
         filename = f"{eng_id_str}-Scope-of-Work.docx"
     else:
-        output_path = _DOCS_DIR / f"{eng_id}-roe.docx"
+        roe_path = _DOCS_DIR / f"{eng_id}-roe.docx"
         docx_bytes = generate_roe(engagement, scope_binding=scope_binding,
-                                  output_path=output_path)
+                                  output_path=roe_path)
         filename = f"{eng_id_str}-Rules-of-Engagement.docx"
 
     return send_file(
@@ -613,7 +613,6 @@ def _serialize_findings(findings) -> list[dict]:
 
 def create_app():
     init_db()
-    _DOCS_DIR.mkdir(parents=True, exist_ok=True)
     # Fix any engagements where techniques was saved as a flat dict
     try:
         from app.storage import migrate_technique_data
