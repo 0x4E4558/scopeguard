@@ -33,6 +33,9 @@ app = Flask(__name__, template_folder="templates", static_folder="static")
 # a local single-user tool).
 app.secret_key = os.environ.get("SCOPEGUARD_SECRET_KEY") or secrets.token_hex(32)
 
+# Directory where generated .docx files are persisted so nex_bridge can read them.
+_DOCS_DIR = Path(__file__).parent.parent / "data" / "docs"
+
 
 def _json_serial(obj):
     if isinstance(obj, (date, datetime)):
@@ -281,37 +284,16 @@ def generate_document(eng_id, doc_type):
         # documents are still generated without scope binding if it fails.
         scope_binding = None
 
-    _DOCS_DIR = Path(__file__).parent.parent / "data" / "docs"
-
     if doc_type == "sow":
-        docx_bytes = generate_sow(engagement, scope_binding=scope_binding)
+        output_path = _DOCS_DIR / f"{eng_id}-sow.docx"
+        docx_bytes = generate_sow(engagement, scope_binding=scope_binding,
+                                  output_path=output_path)
         filename = f"{eng_id_str}-Scope-of-Work.docx"
     else:
-        docx_bytes = generate_roe(engagement, scope_binding=scope_binding)
+        output_path = _DOCS_DIR / f"{eng_id}-roe.docx"
+        docx_bytes = generate_roe(engagement, scope_binding=scope_binding,
+                                  output_path=output_path)
         filename = f"{eng_id_str}-Rules-of-Engagement.docx"
-
-    # Persist the generated document so both paths are available for the
-    # policy bundle.  Errors are logged but never block the download.
-    sow_disk = _DOCS_DIR / f"{eng_id}-sow.docx"
-    roe_disk = _DOCS_DIR / f"{eng_id}-roe.docx"
-    try:
-        _DOCS_DIR.mkdir(parents=True, exist_ok=True)
-        if doc_type == "sow":
-            sow_disk.write_bytes(docx_bytes)
-        else:
-            roe_disk.write_bytes(docx_bytes)
-    except OSError as exc:
-        app.logger.warning("generate_document: could not save .docx to disk: %s", exc)
-
-    # Write the Nex policy bundle once both documents are on disk.
-    if sow_disk.exists() and roe_disk.exists():
-        try:
-            from app.nex_bridge import write_policy_bundle
-            write_policy_bundle(engagement, sow_disk, roe_disk)
-        except ImportError:
-            app.logger.debug("nex_bridge not available; skipping policy bundle write")
-        except Exception as exc:
-            app.logger.warning("generate_document: policy bundle write failed: %s", exc)
 
     return send_file(
         io.BytesIO(docx_bytes),
@@ -631,6 +613,7 @@ def _serialize_findings(findings) -> list[dict]:
 
 def create_app():
     init_db()
+    _DOCS_DIR.mkdir(parents=True, exist_ok=True)
     # Fix any engagements where techniques was saved as a flat dict
     try:
         from app.storage import migrate_technique_data
