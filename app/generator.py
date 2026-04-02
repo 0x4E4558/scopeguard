@@ -11,7 +11,9 @@ Uses python-docx. Mirrors the structure of the MCB sample documents.
 
 from __future__ import annotations
 import io
+import os
 from datetime import date, datetime
+from pathlib import Path
 from typing import Optional
 
 from docx import Document as DocxDocument
@@ -397,7 +399,8 @@ def _contact_display(contact) -> str:
 # SOW GENERATOR
 # ══════════════════════════════════════════════════════════════════════════════
 
-def generate_sow(eng: Engagement, scope_binding: dict | None = None) -> bytes:
+def generate_sow(eng: Engagement, scope_binding: dict | None = None,
+                 output_path: Path | None = None) -> bytes:
     """Generate the Scope of Work document. Returns bytes.
 
     Args:
@@ -910,14 +913,26 @@ def generate_sow(eng: Engagement, scope_binding: dict | None = None) -> bytes:
 
     buf = io.BytesIO()
     doc.save(buf)
-    return buf.getvalue()
+    sow_bytes = buf.getvalue()
+
+    if output_path is not None:
+        output_path.write_bytes(sow_bytes)
+        roe_path = output_path.parent / os.path.basename(
+            output_path.name.replace("-sow.docx", "-roe.docx")
+        )
+        if roe_path.exists():
+            from app.nex_bridge import write_policy_bundle
+            write_policy_bundle(eng, output_path, roe_path)
+
+    return sow_bytes
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ROE GENERATOR
 # ══════════════════════════════════════════════════════════════════════════════
 
-def generate_roe(eng: Engagement, scope_binding: dict | None = None) -> bytes:
+def generate_roe(eng: Engagement, scope_binding: dict | None = None,
+                 output_path: Path | None = None) -> bytes:
     """Generate the Rules of Engagement document. Returns bytes.
 
     Args:
@@ -1306,4 +1321,15 @@ def generate_roe(eng: Engagement, scope_binding: dict | None = None) -> bytes:
 
     buf = io.BytesIO()
     doc.save(buf)
-    return buf.getvalue()
+    roe_bytes = buf.getvalue()
+
+    if output_path is not None:
+        output_path.write_bytes(roe_bytes)
+        sow_path = output_path.parent / os.path.basename(
+            output_path.name.replace("-roe.docx", "-sow.docx")
+        )
+        if sow_path.exists():
+            from app.nex_bridge import write_policy_bundle
+            write_policy_bundle(eng, sow_path, output_path)
+
+    return roe_bytes
