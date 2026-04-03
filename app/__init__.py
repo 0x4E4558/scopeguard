@@ -281,11 +281,18 @@ def generate_document(eng_id, doc_type):
         # documents are still generated without scope binding if it fails.
         scope_binding = None
 
+    _DOCS_DIR = Path(__file__).parent.parent / "data" / "docs"
+    _DOCS_DIR.mkdir(parents=True, exist_ok=True)
+
     if doc_type == "sow":
-        docx_bytes = generate_sow(engagement, scope_binding=scope_binding)
+        sow_path = _DOCS_DIR / f"{eng_id}-sow.docx"
+        docx_bytes = generate_sow(engagement, scope_binding=scope_binding,
+                                  output_path=sow_path)
         filename = f"{eng_id_str}-Scope-of-Work.docx"
     else:
-        docx_bytes = generate_roe(engagement, scope_binding=scope_binding)
+        roe_path = _DOCS_DIR / f"{eng_id}-roe.docx"
+        docx_bytes = generate_roe(engagement, scope_binding=scope_binding,
+                                  output_path=roe_path)
         filename = f"{eng_id_str}-Rules-of-Engagement.docx"
 
     return send_file(
