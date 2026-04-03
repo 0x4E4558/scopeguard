@@ -9,6 +9,7 @@ const SG = (() => {
   let _engId     = null;
   let _sectionId = null;
   let _saveTimer = null;
+  let _saveInProgress = false;
   let _panelCollapsed = true;
 
   // ── Init ────────────────────────────────────────────────────────────────────
@@ -26,6 +27,15 @@ const SG = (() => {
     // dynamically added inputs (new list items) are covered automatically.
     document.addEventListener('change', _onAnyChange);
     document.addEventListener('input',  _onAnyChange);
+
+    // Ctrl/Cmd+S → immediate save
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        clearTimeout(_saveTimer);
+        doSave();
+      }
+    });
   }
 
   function _onAnyChange(e) {
@@ -46,6 +56,8 @@ const SG = (() => {
   }
 
   async function doSave() {
+    if (_saveInProgress) return;
+    _saveInProgress = true;
     // Use SG._collectData if overridden (e.g. technique matrix), else private _collectData
     const data = (typeof SG !== 'undefined' && SG._collectData) ? SG._collectData() : _collectData();
     try {
@@ -67,6 +79,8 @@ const SG = (() => {
     } catch (err) {
       _setStatus('error');
       console.error('Save error:', err);
+    } finally {
+      _saveInProgress = false;
     }
   }
 
@@ -163,6 +177,15 @@ const SG = (() => {
     if (!el) return;
     el.className = `save-status ${state}`;
     el.textContent = { saving: 'Saving…', saved: 'Saved', error: 'Save failed' }[state] || '';
+    // Clear the indicator once the CSS animation finishes so it doesn't linger
+    if (state === 'saved') {
+      setTimeout(() => {
+        if (el.classList.contains('saved')) {
+          el.className = 'save-status';
+          el.textContent = '';
+        }
+      }, 1900); // slightly longer than the 1.8s sg-saved animation
+    }
   }
 
   // ── Conditional visibility ──────────────────────────────────────────────────

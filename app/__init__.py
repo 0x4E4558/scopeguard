@@ -17,13 +17,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from flask import (Flask, render_template, request, jsonify, redirect,
                    url_for, abort, send_file)
 
-from app.storage import init_db, create_engagement, load_engagement, \
-    save_section, update_status, list_engagements, delete_engagement
+from app.storage import (
+    init_db, create_engagement, load_engagement,
+    save_section, update_status, list_engagements, delete_engagement,
+    save_scope_artifact, load_latest_scope_artifact,
+)
 from app.form_builder import get_all_sections, get_section_fields, SECTION_IDS
 from app.hydrator import hydrate
 from scopeguard.validator import Validator
 from scopeguard.finding import Severity
-from scopeguard.token_generator import generate_token_json
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 # Secret key: prefer an environment variable so it stays stable across restarts.
@@ -36,6 +38,29 @@ def _json_serial(obj):
     if isinstance(obj, (date, datetime)):
         return obj.isoformat()
     raise TypeError(f"Not serializable: {type(obj)}")
+
+
+def _get_hmac_key() -> bytes:
+    """Return the HMAC key for scope token signing.
+
+    Resolution order:
+      1. SCOPEGUARD_HMAC_KEY environment variable (hex-encoded).
+      2. data/hmac.key file (hex-encoded, one line).
+      3. Development fallback: a deterministic key derived from app.secret_key.
+         This is NOT suitable for production; set SCOPEGUARD_HMAC_KEY in prod.
+    """
+    env_key = os.environ.get("SCOPEGUARD_HMAC_KEY", "").strip()
+    if env_key:
+        return bytes.fromhex(env_key)
+
+    key_file = Path(__file__).parent.parent / "data" / "hmac.key"
+    if key_file.exists():
+        hex_key = key_file.read_text(encoding="utf-8").strip()
+        return bytes.fromhex(hex_key)
+
+    # Development fallback — not for production use
+    import hashlib
+    return hashlib.sha256(app.secret_key.encode("utf-8")).digest()
 
 
 # ─── Home ─────────────────────────────────────────────────────────────────────
@@ -225,105 +250,54 @@ def generate_document(eng_id, doc_type):
 
     from app.hydrator import hydrate
     from app.generator import generate_sow, generate_roe
+    from scopeguard.scope_compiler import compile_scope, ScopeCompilationError
     import io
 
     engagement = hydrate(record["data"])
     eng_id_str = record["data"].get("identity", {}).get("engagement_id", eng_id[:8])
 
+    # Compile scope and embed binding in the document (fail gracefully if
+    # compilation is not yet possible for this engagement)
+    scope_binding = None
+    try:
+        timestamp = datetime.now(timezone.utc).replace(tzinfo=None)
+        artifact = compile_scope(engagement, timestamp, _get_hmac_key())
+        scope_binding = {
+            "scope_id":   artifact.scope_id,
+            "scope_hash": artifact.scope_hash,
+            "operator_id": artifact.operator_id,
+        }
+        # Persist scope artifact (append-only versioning)
+        save_scope_artifact(eng_id, {
+            "scope_id":   artifact.scope_id,
+            "scope_hash": artifact.scope_hash,
+            "operator_id": artifact.operator_id,
+            "scope":  artifact.scope,
+            "token":  artifact.token,
+            "audit":  artifact.audit,
+        })
+    except (ScopeCompilationError, ValueError, TypeError):
+        # Scope compilation is best-effort during document generation;
+        # documents are still generated without scope binding if it fails.
+        scope_binding = None
+
+    _DOCS_DIR = Path(__file__).parent.parent / "data" / "docs"
+    _DOCS_DIR.mkdir(parents=True, exist_ok=True)
+
     if doc_type == "sow":
-        docx_bytes = generate_sow(engagement)
+        sow_path = _DOCS_DIR / f"{eng_id}-sow.docx"
+        docx_bytes = generate_sow(engagement, scope_binding=scope_binding,
+                                  output_path=sow_path)
         filename = f"{eng_id_str}-Scope-of-Work.docx"
     else:
-        docx_bytes = generate_roe(engagement)
+        roe_path = _DOCS_DIR / f"{eng_id}-roe.docx"
+        docx_bytes = generate_roe(engagement, scope_binding=scope_binding,
+                                  output_path=roe_path)
         filename = f"{eng_id_str}-Rules-of-Engagement.docx"
 
     return send_file(
         io.BytesIO(docx_bytes),
         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        as_attachment=True,
-        download_name=filename,
-    )
-
-
-def _load_scopeguard_hmac_key() -> bytes:
-    """Load the shared ScopeGuard/NEX HMAC key from environment."""
-    key_hex = os.environ.get("SCOPEGUARD_HMAC_SECRET") or os.environ.get("NEX_SCOPE_SECRET")
-    if not key_hex:
-        raise ValueError("Missing SCOPEGUARD_HMAC_SECRET (or NEX_SCOPE_SECRET) environment variable")
-    key_hex = key_hex.strip().lower()
-    if len(key_hex) != 64:
-        raise ValueError("HMAC secret must be exactly 64 hex characters (32 bytes)")
-    try:
-        return bytes.fromhex(key_hex)
-    except ValueError as exc:
-        raise ValueError("HMAC secret must be valid hex") from exc
-
-
-def _resolve_operator_id(record: dict) -> str:
-    """Resolve operator identity for NEX token payload."""
-    env_operator = os.environ.get("NEX_OPERATOR_ID", "").strip()
-    if env_operator:
-        return env_operator
-
-    identity = record.get("data", {}).get("identity", {})
-    prepared_by = str(identity.get("prepared_by") or "").strip()
-    if prepared_by:
-        return prepared_by
-
-    for contact in record.get("data", {}).get("contacts", []):
-        if not isinstance(contact, dict):
-            continue
-        role = str(contact.get("role", "")).strip()
-        email = str(contact.get("email", "")).strip()
-        if role in {"engagement_lead", "team_member"} and email:
-            return email
-
-    raise ValueError("Cannot resolve operator_id for scope token")
-
-
-@app.route("/engagement/<eng_id>/generate/scope-token")
-def generate_scope_token(eng_id):
-    """Generate a NEX-compatible scope token JSON envelope from validated engagement data."""
-    record = load_engagement(eng_id)
-    if record is None:
-        abort(404)
-
-    findings = _run_validation(record["data"])
-    if findings.has_blockers():
-        return jsonify({
-            "error": "Token generation blocked",
-            "blockers": len(findings.blockers()),
-            "message": "Resolve all BLOCK findings before generating a NEX scope token.",
-        }), 422
-
-    import io
-
-    engagement = hydrate(record["data"])
-    eng_id_str = record["data"].get("identity", {}).get("engagement_id", eng_id[:8])
-
-    try:
-        operator_id = _resolve_operator_id(record)
-        hmac_key = _load_scopeguard_hmac_key()
-        ttl_seconds = int(os.environ.get("SCOPEGUARD_TOKEN_TTL_SECONDS", "3600"))
-        if ttl_seconds <= 0:
-            raise ValueError("SCOPEGUARD_TOKEN_TTL_SECONDS must be > 0")
-
-        token_json = generate_token_json(
-            engagement=engagement,
-            operator_id=operator_id,
-            hmac_key=hmac_key,
-            ttl_seconds=ttl_seconds,
-            pretty=True,
-        )
-    except ValueError as exc:
-        return jsonify({"error": "Token generation blocked", "message": str(exc)}), 422
-
-    filename = f"{eng_id_str}-scope-token.json"
-    buf = io.BytesIO(token_json.encode("utf-8"))
-    buf.seek(0)
-    return send_file(
-        buf,
-        mimetype="application/json",
         as_attachment=True,
         download_name=filename,
     )
@@ -335,6 +309,106 @@ def generate_scope_token(eng_id):
 def delete_eng(eng_id):
     delete_engagement(eng_id)
     return redirect(url_for("index"))
+
+
+# ─── Scope artifact ───────────────────────────────────────────────────────────
+
+@app.route("/engagement/<eng_id>/scope")
+def scope_artifact(eng_id):
+    """Compile and return the machine-enforceable scope.json for this engagement.
+
+    Validates the engagement, compiles a ScopeArtifact, persists it, and
+    returns the canonical scope.json as a downloadable file.
+    """
+    record = load_engagement(eng_id)
+    if record is None:
+        abort(404)
+
+    findings = _run_validation(record["data"])
+    if findings.has_blockers():
+        return jsonify({
+            "error": "Scope compilation blocked",
+            "blockers": len(findings.blockers()),
+            "message": "Resolve all BLOCK findings before compiling scope.",
+        }), 422
+
+    from app.hydrator import hydrate
+    from scopeguard.scope_compiler import compile_scope, ScopeCompilationError
+    from scopeguard.canonicalize import canonical_json
+    import io as _io
+
+    try:
+        engagement = hydrate(record["data"])
+        timestamp = datetime.now(timezone.utc).replace(tzinfo=None)
+        artifact = compile_scope(engagement, timestamp, _get_hmac_key())
+    except ScopeCompilationError:
+        return jsonify({"error": "Scope compilation error", "detail": "One or more required engagement fields are missing or invalid."}), 422
+
+    save_scope_artifact(eng_id, {
+        "scope_id":   artifact.scope_id,
+        "scope_hash": artifact.scope_hash,
+        "operator_id": artifact.operator_id,
+        "scope":  artifact.scope,
+        "token":  artifact.token,
+        "audit":  artifact.audit,
+    })
+
+    eng_id_str = record["data"].get("identity", {}).get("engagement_id", eng_id[:8])
+    buf = _io.BytesIO(canonical_json(artifact.scope).encode("utf-8"))
+    buf.seek(0)
+    return send_file(buf, mimetype="application/json", as_attachment=True,
+                     download_name=f"{eng_id_str}-scope.json")
+
+
+@app.route("/engagement/<eng_id>/nex-export", methods=["POST"])
+def nex_export(eng_id):
+    """Write the full scope artifact set to the Nex artifact directory layout.
+
+    Writes to the configured Nex artifacts directory (default:
+    /var/lib/nex/artifacts, overridable via SCOPEGUARD_NEX_ARTIFACTS_DIR env
+    var).  Returns a JSON manifest describing what was written.
+    """
+    record = load_engagement(eng_id)
+    if record is None:
+        abort(404)
+
+    findings = _run_validation(record["data"])
+    if findings.has_blockers():
+        return jsonify({
+            "error": "Nex export blocked",
+            "blockers": len(findings.blockers()),
+            "message": "Resolve all BLOCK findings before exporting to Nex.",
+        }), 422
+
+    from app.hydrator import hydrate
+    from app.nex_export import export_to_nex
+    from scopeguard.scope_compiler import compile_scope, ScopeCompilationError
+
+    try:
+        engagement = hydrate(record["data"])
+        timestamp = datetime.now(timezone.utc).replace(tzinfo=None)
+        artifact = compile_scope(engagement, timestamp, _get_hmac_key())
+    except ScopeCompilationError:
+        return jsonify({"error": "Scope compilation error", "detail": "One or more required engagement fields are missing or invalid."}), 422
+
+    try:
+        manifest = export_to_nex(artifact, timestamp)
+    except OSError:
+        return jsonify({"error": "Nex export failed",
+                        "detail": "Unable to write to the Nex artifact directory."}), 500
+
+    # Also persist in DB
+    save_scope_artifact(eng_id, {
+        "scope_id":   artifact.scope_id,
+        "scope_hash": artifact.scope_hash,
+        "operator_id": artifact.operator_id,
+        "scope":  artifact.scope,
+        "token":  artifact.token,
+        "audit":  artifact.audit,
+    })
+
+    return jsonify(manifest)
+
 
 
 # ─── JSON export ──────────────────────────────────────────────────────────────
@@ -508,18 +582,18 @@ def _run_validation(data: dict):
         return Validator(engagement).validate()
     except Exception as e:
         import traceback
-        app.logger.warning(f"Validation error (returning empty findings): {e}")
+        app.logger.warning(f"Validation error: {e}")
         app.logger.debug(traceback.format_exc())
-        from scopeguard.finding import Finding, FindingList, Severity
-        failed = FindingList()
-        failed.add(Finding(
-            rule_id="VAL-ENGINE-001",
+        from scopeguard.finding import FindingList, Finding, Severity
+        fl = FindingList()
+        fl.add(Finding(
+            rule_id="SYS-001",
             severity=Severity.BLOCK,
-            description="Validation engine failed to evaluate engagement state.",
-            resolution="Resolve validation runtime errors before generating artifacts or tokens.",
-            field_path=None,
+            description=f"Internal validation error — engagement data could not be processed: {e}",
+            resolution="Check the server log for a full traceback. This is usually caused by "
+                       "corrupted or partially-saved section data. Re-save each section to recover.",
         ))
-        return failed
+        return fl
 
 
 def _serialize_findings(findings) -> list[dict]:

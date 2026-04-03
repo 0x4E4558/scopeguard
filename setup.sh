@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ScopeGuard setup — creates a venv and installs dependencies
-# Run once: bash setup.sh
+# Run: bash setup.sh
 # Then to start the app: bash run.sh
 
 set -e
@@ -33,8 +33,8 @@ fi
 # Install dependencies
 echo "  Installing dependencies..."
 "$VENV_DIR/bin/pip" install --quiet --upgrade pip
-"$VENV_DIR/bin/pip" install --quiet flask pyyaml
-echo "  ✓ flask, pyyaml installed"
+"$VENV_DIR/bin/pip" install --quiet -r requirements.txt
+echo "  ✓ dependencies installed"
 
 # Create data directory
 mkdir -p data
@@ -46,7 +46,3 @@ echo "  To start ScopeGuard, run:"
 echo ""
 echo "    bash run.sh"
 echo ""
-
-# Re-run to pick up python-docx if added after initial setup
-"$VENV_DIR/bin/pip" install --quiet python-docx
-echo "  ✓ python-docx installed"
