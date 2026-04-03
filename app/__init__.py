@@ -23,6 +23,7 @@ from app.form_builder import get_all_sections, get_section_fields, SECTION_IDS
 from app.hydrator import hydrate
 from scopeguard.validator import Validator
 from scopeguard.finding import Severity
+from scopeguard.token_generator import generate_token_json
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 # Secret key: prefer an environment variable so it stays stable across restarts.
@@ -244,6 +245,90 @@ def generate_document(eng_id, doc_type):
     )
 
 
+def _load_scopeguard_hmac_key() -> bytes:
+    """Load the shared ScopeGuard/NEX HMAC key from environment."""
+    key_hex = os.environ.get("SCOPEGUARD_HMAC_SECRET") or os.environ.get("NEX_SCOPE_SECRET")
+    if not key_hex:
+        raise ValueError("Missing SCOPEGUARD_HMAC_SECRET (or NEX_SCOPE_SECRET) environment variable")
+    key_hex = key_hex.strip().lower()
+    if len(key_hex) != 64:
+        raise ValueError("HMAC secret must be exactly 64 hex characters (32 bytes)")
+    try:
+        return bytes.fromhex(key_hex)
+    except ValueError as exc:
+        raise ValueError("HMAC secret must be valid hex") from exc
+
+
+def _resolve_operator_id(record: dict) -> str:
+    """Resolve operator identity for NEX token payload."""
+    env_operator = os.environ.get("NEX_OPERATOR_ID", "").strip()
+    if env_operator:
+        return env_operator
+
+    identity = record.get("data", {}).get("identity", {})
+    prepared_by = str(identity.get("prepared_by") or "").strip()
+    if prepared_by:
+        return prepared_by
+
+    for contact in record.get("data", {}).get("contacts", []):
+        if not isinstance(contact, dict):
+            continue
+        role = str(contact.get("role", "")).strip()
+        email = str(contact.get("email", "")).strip()
+        if role in {"engagement_lead", "team_member"} and email:
+            return email
+
+    raise ValueError("Cannot resolve operator_id for scope token")
+
+
+@app.route("/engagement/<eng_id>/generate/scope-token")
+def generate_scope_token(eng_id):
+    """Generate a NEX-compatible scope token JSON envelope from validated engagement data."""
+    record = load_engagement(eng_id)
+    if record is None:
+        abort(404)
+
+    findings = _run_validation(record["data"])
+    if findings.has_blockers():
+        return jsonify({
+            "error": "Token generation blocked",
+            "blockers": len(findings.blockers()),
+            "message": "Resolve all BLOCK findings before generating a NEX scope token.",
+        }), 422
+
+    import io
+
+    engagement = hydrate(record["data"])
+    eng_id_str = record["data"].get("identity", {}).get("engagement_id", eng_id[:8])
+
+    try:
+        operator_id = _resolve_operator_id(record)
+        hmac_key = _load_scopeguard_hmac_key()
+        ttl_seconds = int(os.environ.get("SCOPEGUARD_TOKEN_TTL_SECONDS", "3600"))
+        if ttl_seconds <= 0:
+            raise ValueError("SCOPEGUARD_TOKEN_TTL_SECONDS must be > 0")
+
+        token_json = generate_token_json(
+            engagement=engagement,
+            operator_id=operator_id,
+            hmac_key=hmac_key,
+            ttl_seconds=ttl_seconds,
+            pretty=True,
+        )
+    except ValueError as exc:
+        return jsonify({"error": "Token generation blocked", "message": str(exc)}), 422
+
+    filename = f"{eng_id_str}-scope-token.json"
+    buf = io.BytesIO(token_json.encode("utf-8"))
+    buf.seek(0)
+    return send_file(
+        buf,
+        mimetype="application/json",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
 # ─── Delete ───────────────────────────────────────────────────────────────────
 
 @app.route("/engagement/<eng_id>/delete", methods=["POST"])
@@ -425,8 +510,16 @@ def _run_validation(data: dict):
         import traceback
         app.logger.warning(f"Validation error (returning empty findings): {e}")
         app.logger.debug(traceback.format_exc())
-        from scopeguard.finding import FindingList
-        return FindingList()
+        from scopeguard.finding import Finding, FindingList, Severity
+        failed = FindingList()
+        failed.add(Finding(
+            rule_id="VAL-ENGINE-001",
+            severity=Severity.BLOCK,
+            description="Validation engine failed to evaluate engagement state.",
+            resolution="Resolve validation runtime errors before generating artifacts or tokens.",
+            field_path=None,
+        ))
+        return failed
 
 
 def _serialize_findings(findings) -> list[dict]:
