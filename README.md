@@ -1,7 +1,31 @@
 # ScopeGuard v2.0
-**Penetration Test Scope & Rules of Engagement Builder**
 
-A local-only Flask application that guides penetration testing teams through building validated, legally defensible Scope of Work (SOW) and Rules of Engagement (ROE) documents. Every field is validated before a document can be generated. Every ambiguity is caught before anyone signs. All fonts are served locally — no internet connection required at runtime.
+<p align="center">
+  <strong>Penetration Test Scope &amp; Rules of Engagement Builder</strong><br/>
+  <em>Standalone tool · Designed to integrate with the proprietary <strong>NEX</strong> security platform</em>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square" alt="Python 3.10+"/>
+  <img src="https://img.shields.io/badge/flask-local--only-lightgrey?style=flat-square" alt="Flask local-only"/>
+  <img src="https://img.shields.io/badge/storage-SQLite%20%E2%80%94%20local-green?style=flat-square" alt="Local SQLite"/>
+  <img src="https://img.shields.io/badge/internet-not%20required-success?style=flat-square" alt="No internet required"/>
+  <img src="https://img.shields.io/badge/tests-129%20passing-brightgreen?style=flat-square" alt="129 tests"/>
+</p>
+
+---
+
+A local-only Flask application that guides penetration testing teams through building validated, legally defensible Scope of Work (SOW) and Rules of Engagement (ROE) documents.  Every field is validated before a document can be generated.  Every ambiguity is caught before anyone signs.  All fonts are served locally — no internet connection required at runtime.
+
+---
+
+## ⚡ NEX — Coming Soon
+
+> ScopeGuard is designed to serve as the **scope and authorisation layer** for **NEX**, a proprietary third-party security platform that is currently under heavy development.  NEX will not be released until its Arch-based `.iso` has been fully assembled, tested, and confirmed stable.
+
+NEX is a modular Python security platform built from the ground up on the stdlib — no pip, no npm, nothing external.  It covers the full engagement lifecycle: active reconnaissance, vulnerability discovery, exploitation-impact analysis, live threat detection across endpoint, network, identity, cloud, and deception layers, and a complete digital forensics suite with chain-of-custody controls.  Everything routes through a single authorisation hub, every byte of sensitive memory is physically zeroed after use, and every run produces three forensically defensible reports — an executive summary, a full technical report, and a chain-of-custody forensic report with evidence export.
+
+> 🚧 Screenshots of ScopeGuard and NEX running together will be added here once the platform reaches public release.
 
 ---
 
@@ -20,13 +44,15 @@ bash run.sh       # starts at http://127.0.0.1:5000
 
 ## Screenshots
 
+> 📸 **These screenshots will be replaced** with updated captures showing ScopeGuard and NEX running together once testing is complete.
+
 **Engagement intake form — technique authorization matrix**
 
-![Technique matrix](Screenshot_20260319_115434.png)
+![Technique authorization matrix](Screenshot_20260319_115434.png)
 
 **Pre-flight report — findings grouped by severity before document generation**
 
-![Pre-flight report](Screenshot_20260319_115540.png)
+![Pre-flight validation report](Screenshot_20260319_115540.png)
 
 ---
 
