@@ -1,7 +1,74 @@
 # ScopeGuard v2.0
-**Penetration Test Scope & Rules of Engagement Builder**
 
-A local-only Flask application that guides penetration testing teams through building validated, legally defensible Scope of Work (SOW) and Rules of Engagement (ROE) documents. Every field is validated before a document can be generated. Every ambiguity is caught before anyone signs. All fonts are served locally — no internet connection required at runtime.
+<p align="center">
+  <strong>Penetration Test Scope &amp; Rules of Engagement Builder</strong><br/>
+  <em>Standalone tool · Designed to integrate with the proprietary <strong>NEX</strong> security platform</em>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square" alt="Python 3.10+"/>
+  <img src="https://img.shields.io/badge/flask-local--only-lightgrey?style=flat-square" alt="Flask local-only"/>
+  <img src="https://img.shields.io/badge/storage-SQLite%20%E2%80%94%20local-green?style=flat-square" alt="Local SQLite"/>
+  <img src="https://img.shields.io/badge/internet-not%20required-success?style=flat-square" alt="No internet required"/>
+  <img src="https://img.shields.io/badge/tests-129%20passing-brightgreen?style=flat-square" alt="129 tests"/>
+</p>
+
+---
+
+A local-only Flask application that guides penetration testing teams through building validated, legally defensible Scope of Work (SOW) and Rules of Engagement (ROE) documents.  Every field is validated before a document can be generated.  Every ambiguity is caught before anyone signs.  All fonts are served locally — no internet connection required at runtime.
+
+---
+
+## ⚡ NEX — Coming Soon
+
+> **NEX is a proprietary third-party security platform currently under heavy development.**
+> It will not be released until its Arch-based `.iso` has been fully assembled, tested, and confirmed stable and bug-free.
+
+ScopeGuard is designed to serve as the **scope and authorisation layer** for NEX — and that binding is a hard architectural constraint, not an optional integration.  A NEX session cannot start without a valid ScopeGuard policy bundle.  There is no bypass.
+
+### What is NEX?
+
+NEX is a modular Python security platform built from the ground up on the stdlib — no pip, no npm, nothing external.  It covers the full engagement lifecycle: active reconnaissance, vulnerability discovery, exploitation-impact analysis, live threat detection across endpoint, network, identity, cloud, and deception layers, and a complete digital forensics suite with chain-of-custody controls.  Everything routes through a single authorisation hub, every byte of sensitive memory is physically zeroed after use, and every run produces three forensically defensible reports — an executive summary, a full technical report, and a chain-of-custody forensic report with evidence export.
+
+### How ScopeGuard binds to NEX
+
+The binding happens in a strict four-step sequence every time an engagement is finalised:
+
+```
+ScopeGuard                                  NEX
+──────────────────────────────────────────────────────────────────────
+1.  Validate engagement (0 BLOCK findings)
+2.  Generate SOW.docx + ROE.docx
+3.  SHA-256 hash both documents
+4.  Compile policy bundle ─────────────────▶ /etc/scopeguard-policy.json
+                                               ↑
+                                    BootPolicy.initialise() reads this
+                                    before any module is allowed to run
+                                               ↓
+                                    ROEConstraints constructed:
+                                      • allowed_targets  (in-scope CIDRs)
+                                      • allowed_techniques (TechniqueClass values
+                                        derived from your technique matrix)
+                                      • restricted_targets (out-of-scope CIDRs)
+                                      • tactical_window_start / _end
+                                      • sow_hash  (SHA-256 of SOW .docx)
+                                               ↓
+                                    ScopeTokenManager issues tokens
+                                    ExecutionGate checks every module call
+                                    against the live token — wrong CIDR,
+                                    wrong technique category, outside window
+                                    → hard block, session terminates
+```
+
+**What this means in practice:**
+
+- The in-scope CIDRs you enter in ScopeGuard become the *only* targets NEX will touch.  Any technique aimed at an address outside those ranges is blocked at the gate.
+- The technique authorization matrix you fill in ScopeGuard maps directly to `TechniqueClass` values in NEX's `PolicyDecisionEngine`.  A technique not authorized in ScopeGuard is a technique NEX will not run.
+- The engagement window you set in ScopeGuard is enforced by NEX at runtime — no testing before start, no testing after end.
+- The SHA-256 hash of the signed SOW `.docx` is embedded in the policy bundle and carried through into every `RecoveryRecord`, creating a cryptographic chain of custody from the signed legal document to every action NEX takes.
+- ScopeGuard also writes a second, richer artifact set to `/var/lib/nex/artifacts/<scope_id>/` — a canonical `scope.json`, an HMAC-signed `scope_token.json`, a full `audit.json`, and an append-only `version_index.json`.  These files are written atomically and are never mutated after creation.
+
+> 🚧 Screenshots of ScopeGuard and NEX running together will be added here once the platform reaches public release.
 
 ---
 
@@ -20,13 +87,15 @@ bash run.sh       # starts at http://127.0.0.1:5000
 
 ## Screenshots
 
+> 📸 **These screenshots will be replaced** with updated captures showing ScopeGuard and NEX running together once testing is complete.
+
 **Engagement intake form — technique authorization matrix**
 
-![Technique matrix](Screenshot_20260319_115434.png)
+![Technique authorization matrix](Screenshot_20260319_115434.png)
 
 **Pre-flight report — findings grouped by severity before document generation**
 
-![Pre-flight report](Screenshot_20260319_115540.png)
+![Pre-flight validation report](Screenshot_20260319_115540.png)
 
 ---
 
