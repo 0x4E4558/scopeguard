@@ -1,9 +1,9 @@
 """
-scopeguard.token_generator
+nex.token_generator
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-ScopeGuard-side NEX envelope issuance and compatibility validation.
+Nex-side NEX envelope issuance and compatibility validation.
 
-Implements the embedded compatibility contract used by ScopeGuard.
+Implements the embedded compatibility contract used by Nex.
 """
 
 from __future__ import annotations
@@ -23,22 +23,22 @@ from .models import Engagement
 from .nex_contract import (
     capability_to_d3fend_ids,
     governance_reason_codes,
-    known_scopeguard_module_ids,
-    scopeguard_allowlist_by_technique_class,
+    known_nex_module_ids,
+    nex_allowlist_by_technique_class,
     strict_d3fend_required_non_empty,
 )
 
 ALGORITHM_LITERAL = "HMAC-SHA256"
 SCHEMA_VERSION = "1.0"
 
-_SCOPEGUARD_REASON_CODES = {
-    "scopeguard_bad_signature",
-    "scopeguard_bad_expires_at",
-    "scopeguard_expired",
-    "scopeguard_target_out_of_scope",
-    "scopeguard_operator_mismatch",
-    "scopeguard_module_not_allowed",
-    "scopeguard_validation_error",
+_NEX_REASON_CODES = {
+    "nex_bad_signature",
+    "nex_bad_expires_at",
+    "nex_expired",
+    "nex_target_out_of_scope",
+    "nex_operator_mismatch",
+    "nex_module_not_allowed",
+    "nex_validation_error",
     "ok",
 }
 
@@ -77,8 +77,8 @@ class ScopeTokenEnvelope:
         }
 
 
-class ScopeGuardEnvelopeValidator:
-    """ScopeGuard-side validator mirroring NEX scopeguard envelope semantics."""
+class NexEnvelopeValidator:
+    """Nex-side validator mirroring NEX nex envelope semantics."""
 
     def __init__(self, hmac_key: bytes):
         if not hmac_key or len(hmac_key) != 32:
@@ -86,7 +86,7 @@ class ScopeGuardEnvelopeValidator:
         self.hmac_key = hmac_key
 
     @staticmethod
-    def is_scopeguard_envelope(obj: Any) -> bool:
+    def is_nex_envelope(obj: Any) -> bool:
         if not isinstance(obj, dict):
             return False
         return "algorithm" in obj and "payload" in obj and "signature" in obj
@@ -124,47 +124,47 @@ class ScopeGuardEnvelopeValidator:
         nex_module_ids: list[str],
     ) -> tuple[bool, str]:
         try:
-            if not self.is_scopeguard_envelope(envelope):
-                return False, "scopeguard_validation_error"
+            if not self.is_nex_envelope(envelope):
+                return False, "nex_validation_error"
 
             payload = envelope.get("payload")
             signature = envelope.get("signature")
             if not isinstance(payload, dict) or not isinstance(signature, str):
-                return False, "scopeguard_validation_error"
+                return False, "nex_validation_error"
 
             if not self._verify_signature(payload, signature):
-                return False, "scopeguard_bad_signature"
+                return False, "nex_bad_signature"
 
             expires_at_raw = payload.get("expires_at")
             expires_at = self._parse_iso_utc(expires_at_raw)
             if expires_at is None:
-                return False, "scopeguard_bad_expires_at"
+                return False, "nex_bad_expires_at"
             if datetime.now(timezone.utc) >= expires_at:
-                return False, "scopeguard_expired"
+                return False, "nex_expired"
 
             token_operator = str(payload.get("operator_id", ""))
             if operator_id and token_operator and token_operator != str(operator_id):
-                return False, "scopeguard_operator_mismatch"
+                return False, "nex_operator_mismatch"
 
             token_modules = payload.get("nex_modules", [])
             if not isinstance(token_modules, list):
-                return False, "scopeguard_validation_error"
+                return False, "nex_validation_error"
             token_modules_clean = [m for m in token_modules if isinstance(m, str) and m]
 
             if token_modules_clean and nex_module_ids:
                 if not any(req in token_modules_clean for req in nex_module_ids):
-                    return False, "scopeguard_module_not_allowed"
+                    return False, "nex_module_not_allowed"
 
-            # ScopeGuard envelope path: enforce only authorized_cidrs if provided.
+            # Nex envelope path: enforce only authorized_cidrs if provided.
             authorized_cidrs = payload.get("authorized_cidrs", [])
             if authorized_cidrs:
                 if not isinstance(authorized_cidrs, list):
-                    return False, "scopeguard_validation_error"
+                    return False, "nex_validation_error"
                 normalized_target = self._normalize_target(target)
                 try:
                     target_ip = ipaddress.ip_address(normalized_target)
                 except ValueError:
-                    return False, "scopeguard_target_out_of_scope"
+                    return False, "nex_target_out_of_scope"
 
                 matched = False
                 for cidr in authorized_cidrs:
@@ -177,11 +177,11 @@ class ScopeGuardEnvelopeValidator:
                     except ValueError:
                         continue
                 if not matched:
-                    return False, "scopeguard_target_out_of_scope"
+                    return False, "nex_target_out_of_scope"
 
             return True, "ok"
         except Exception:
-            return False, "scopeguard_validation_error"
+            return False, "nex_validation_error"
 
     def _verify_signature(self, payload: Dict[str, Any], signature: str) -> bool:
         canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
@@ -205,10 +205,10 @@ class ScopeGuardEnvelopeValidator:
 
 
 class ScopeTokenGenerator:
-    """Generates NEX-compatible ScopeGuard token envelopes."""
+    """Generates NEX-compatible Nex token envelopes."""
 
-    # ScopeGuard technique categories -> NEX technique classes.
-    SCOPEGUARD_TO_NEX_TECHNIQUE_CLASSES: dict[str, list[str]] = {
+    # Nex technique categories -> NEX technique classes.
+    NEX_TO_NEX_TECHNIQUE_CLASSES: dict[str, list[str]] = {
         "reconnaissance": ["RECON", "ENUMERATION"],
         "vuln_scanning": ["VULNERABILITY_SCAN", "WEB_ANALYSIS", "NETWORK_CAPTURE"],
         "exploitation": ["EXPLOIT", "CREDENTIAL_HARVEST"],
@@ -276,15 +276,15 @@ class ScopeTokenGenerator:
         return payload
 
     def _derive_nex_modules(self) -> list[str]:
-        allowlist = scopeguard_allowlist_by_technique_class()
-        known = known_scopeguard_module_ids()
+        allowlist = nex_allowlist_by_technique_class()
+        known = known_nex_module_ids()
 
         technique_classes: set[str] = set()
         for technique in self.engagement.techniques:
             if technique.authorization_status.value != "authorized":
                 continue
             category = technique.category.value
-            mapped = self.SCOPEGUARD_TO_NEX_TECHNIQUE_CLASSES.get(category)
+            mapped = self.NEX_TO_NEX_TECHNIQUE_CLASSES.get(category)
             if mapped is None:
                 raise ValueError(f"No NEX technique class mapping for category '{category}'")
             technique_classes.update(mapped)
@@ -299,7 +299,7 @@ class ScopeTokenGenerator:
 
         if not modules:
             # Compatibility rule: empty derived allowlist is ignored by NEX gate,
-            # but ScopeGuard still emits a deterministic empty list only if no
+            # but Nex still emits a deterministic empty list only if no
             # mappings exist for selected classes.
             return []
 
@@ -404,16 +404,16 @@ class ScopeTokenGenerator:
         if "authorized_cidrs" in payload and not isinstance(payload["authorized_cidrs"], list):
             raise ValueError("authorized_cidrs must be list[str] when provided")
 
-        validator = ScopeGuardEnvelopeValidator(self.hmac_key)
+        validator = NexEnvelopeValidator(self.hmac_key)
         ok, reason = validator.validate_with_reason(
             envelope,
             target="0.0.0.0",
             operator_id=self.operator_id,
             nex_module_ids=[],
         )
-        if reason not in _SCOPEGUARD_REASON_CODES:
-            raise ValueError(f"Unexpected scopeguard reason code: {reason}")
-        if not ok and reason != "scopeguard_target_out_of_scope":
+        if reason not in _NEX_REASON_CODES:
+            raise ValueError(f"Unexpected nex reason code: {reason}")
+        if not ok and reason != "nex_target_out_of_scope":
             # We pass a synthetic target that may fail target checks intentionally.
             raise ValueError(f"Generated envelope failed compatibility validation: {reason}")
 
@@ -467,7 +467,7 @@ def validate_token_with_reason(
     operator_id: Optional[str],
     nex_module_ids: list[str],
 ) -> tuple[bool, str]:
-    validator = ScopeGuardEnvelopeValidator(hmac_key)
+    validator = NexEnvelopeValidator(hmac_key)
     ok, reason = validator.validate_with_reason(
         envelope,
         target=target,
@@ -475,8 +475,8 @@ def validate_token_with_reason(
         nex_module_ids=nex_module_ids,
     )
     manifest_codes = governance_reason_codes()
-    if reason not in _SCOPEGUARD_REASON_CODES:
-        return False, "scopeguard_validation_error"
+    if reason not in _NEX_REASON_CODES:
+        return False, "nex_validation_error"
     if manifest_codes and reason not in manifest_codes:
-        return False, "scopeguard_validation_error"
+        return False, "nex_validation_error"
     return ok, reason

@@ -1,4 +1,4 @@
-"""ScopeGuard — Penetration Test Scope & ROE Builder"""
+"""Nex — Penetration Test Scope & ROE Builder"""
 from .finding import Finding, FindingList, Severity
 from .models import Engagement
 from .validator import Validator

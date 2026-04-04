@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ScopeGuard setup — creates a venv and installs dependencies
+# Nex setup — creates a venv and installs dependencies
 # Run: bash setup.sh
 # Then to start the app: bash run.sh
 
@@ -8,7 +8,7 @@ set -e
 VENV_DIR=".venv"
 
 echo ""
-echo "  ScopeGuard setup"
+echo "  Nex setup"
 echo "  ────────────────"
 
 # Check Python version
@@ -42,7 +42,7 @@ echo "  ✓ data/ directory ready"
 
 echo ""
 echo "  Setup complete."
-echo "  To start ScopeGuard, run:"
+echo "  To start Nex, run:"
 echo ""
 echo "    bash run.sh"
 echo ""

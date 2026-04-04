@@ -17,13 +17,13 @@ from datetime import date, datetime, timedelta
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from scopeguard.validator import Validator
-from scopeguard.models import (
+from nex.validator import Validator
+from nex.models import (
     NetworkAsset, OutOfScopeAsset, PhysicalLocation, Technique, MaintenanceWindow,
     DeliveryMethod, AuthorizationStatus, TechniqueCategory, DocumentStatus,
     EngagementType, RegulatoryBasis, UsbPayloadType, BlackoutDate,
 )
-from scopeguard.finding import Severity
+from nex.finding import Severity
 from tests.conftest import load_fixture
 
 
@@ -908,7 +908,7 @@ def test_route_export_returns_json():
     assert r.status_code == 200
     assert r.content_type == "application/json"
     payload = _json.loads(r.data)
-    assert payload.get("scopeguard_export") is True
+    assert payload.get("nex_export") is True
     assert "identity" in payload["data"]
 
 def test_route_import_creates_engagement():
@@ -1097,7 +1097,7 @@ ALL_TESTS = [
 
 
 def main():
-    print(f"\nScopeGuard v2 — Complete Test Suite")
+    print(f"\nNex v2 — Complete Test Suite")
     print(f"{'─' * 60}")
 
     for fn, name in ALL_TESTS:

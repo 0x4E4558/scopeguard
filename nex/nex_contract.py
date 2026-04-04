@@ -1,7 +1,7 @@
 """
-scopeguard.nex_contract
+nex.nex_contract
 ~~~~~~~~~~~~~~~~~~~~~~~
-Embedded NEX compatibility contract data for ScopeGuard.
+Embedded NEX compatibility contract data for Nex.
 
 The runtime implementation must not depend on external compatibility files.
 This module owns the embedded contract tables used by token generation and
@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Dict, Set
 
-_SCOPEGUARD_ALLOWLIST_BY_TECHNIQUE_CLASS: dict[str, list[str]] = {
+_NEX_ALLOWLIST_BY_TECHNIQUE_CLASS: dict[str, list[str]] = {
     "RECON": ["nex.recon.dns_enum@1.0", "nex.recon.asn_lookup@1.0"],
     "ENUMERATION": ["nex.recon.host_enum@1.0", "nex.recon.service_enum@1.0"],
     "VULNERABILITY_SCAN": ["nex.scan.port_scan@1.0", "nex.scan.vuln_scan@1.0"],
@@ -66,26 +66,26 @@ _MODULE_TO_D3FEND_IDS: dict[str, set[str]] = {
 }
 
 _GOVERNANCE_REJECT_REASON_CODES: set[str] = {
-    "scopeguard_bad_signature",
-    "scopeguard_bad_expires_at",
-    "scopeguard_expired",
-    "scopeguard_target_out_of_scope",
-    "scopeguard_operator_mismatch",
-    "scopeguard_module_not_allowed",
-    "scopeguard_validation_error",
+    "nex_bad_signature",
+    "nex_bad_expires_at",
+    "nex_expired",
+    "nex_target_out_of_scope",
+    "nex_operator_mismatch",
+    "nex_module_not_allowed",
+    "nex_validation_error",
     "ok",
 }
 
 _STRICT_D3FEND_REQUIRED_NON_EMPTY = True
 
 
-def scopeguard_allowlist_by_technique_class() -> dict[str, list[str]]:
-    return {key: list(values) for key, values in _SCOPEGUARD_ALLOWLIST_BY_TECHNIQUE_CLASS.items()}
+def nex_allowlist_by_technique_class() -> dict[str, list[str]]:
+    return {key: list(values) for key, values in _NEX_ALLOWLIST_BY_TECHNIQUE_CLASS.items()}
 
 
-def known_scopeguard_module_ids() -> set[str]:
+def known_nex_module_ids() -> set[str]:
     out: set[str] = set()
-    for values in _SCOPEGUARD_ALLOWLIST_BY_TECHNIQUE_CLASS.values():
+    for values in _NEX_ALLOWLIST_BY_TECHNIQUE_CLASS.values():
         out.update(values)
     return out
 

@@ -27,11 +27,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from scopeguard.canonicalize import canonical_json
-from scopeguard.scope_compiler import ScopeArtifact
+from nex.canonicalize import canonical_json
+from nex.scope_compiler import ScopeArtifact
 
 DEFAULT_NEX_ARTIFACTS_DIR = Path(
-    os.environ.get("SCOPEGUARD_NEX_ARTIFACTS_DIR", "/var/lib/nex/artifacts")
+    os.environ.get("NEX_ARTIFACTS_DIR", "/var/lib/nex/artifacts")
 )
 
 # Version index schema

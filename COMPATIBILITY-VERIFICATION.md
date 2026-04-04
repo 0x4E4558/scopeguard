@@ -1,14 +1,14 @@
 # NEX Compatibility Verification Report
 
 **Date:** April 3, 2026  
-**Repository:** ScopeGuard  
+**Repository:** Nex  
 **Status:** ✅ COMPLETE — All NEX contract requirements implemented and verified
 
 ---
 
 ## Executive Summary
 
-ScopeGuard has been successfully integrated with the NEX compatibility contract as defined in:
+Nex has been successfully integrated with the NEX compatibility contract as defined in:
 - `NEX-COMPATIBILITY-PACK.md`
 - `NEX-COMPATIBILITY-MANIFEST.json`
 - `NEX-COMPATIBILITY-MATRIX.csv`
@@ -52,7 +52,7 @@ ScopeGuard has been successfully integrated with the NEX compatibility contract 
 |--------|--------|---------|
 | HMAC Algorithm | ✅ Implemented | SHA-256 over canonical JSON payload |
 | Canonical Form | ✅ Implemented | `json.dumps(payload, sort_keys=True, separators=(",", ":"))`  |
-| Key Format | ✅ Implemented | 32-byte (256-bit) binary from `SCOPEGUARD_HMAC_SECRET` env var |
+| Key Format | ✅ Implemented | 32-byte (256-bit) binary from `NEX_HMAC_SECRET` env var |
 | Verification | ✅ Implemented | `secrets.compare_digest()` + strict timing-attack resistance |
 
 **Test Coverage:**
@@ -69,9 +69,9 @@ ScopeGuard has been successfully integrated with the NEX compatibility contract 
 | Requirement | Status | Implementation |
 |-------------|--------|-----------------|
 | ISO format requirement | ✅ Implemented | All timestamps emitted with `Z` suffix (UTC) |
-| Parse behavior (suffix-agnostic) | ✅ Implemented | `ScopeGuardEnvelopeValidator._parse_iso_utc()` strips `Z` and converts to `+00:00` |
+| Parse behavior (suffix-agnostic) | ✅ Implemented | `NexEnvelopeValidator._parse_iso_utc()` strips `Z` and converts to `+00:00` |
 | Expiry check | ✅ Implemented | Comparison: `datetime.now(timezone.utc) >= expires_at` |
-| Bad format rejection | ✅ Implemented | Returns reason code `scopeguard_bad_expires_at` |
+| Bad format rejection | ✅ Implemented | Returns reason code `nex_bad_expires_at` |
 
 **Test Coverage:**
 - ✅ `test_expires_at_iso8601_z` — validates Z-suffix presence
@@ -85,9 +85,9 @@ ScopeGuard has been successfully integrated with the NEX compatibility contract 
 
 From `NEX-COMPATIBILITY-MANIFEST.json` → `governance_reject_reason_codes`:
 ```json
-["scopeguard_bad_signature", "scopeguard_bad_expires_at", "scopeguard_expired", 
- "scopeguard_target_out_of_scope", "scopeguard_operator_mismatch", 
- "scopeguard_module_not_allowed", "scopeguard_validation_error", "ok"]
+["nex_bad_signature", "nex_bad_expires_at", "nex_expired", 
+ "nex_target_out_of_scope", "nex_operator_mismatch", 
+ "nex_module_not_allowed", "nex_validation_error", "ok"]
 ```
 
 **Reason Code Semantics:**
@@ -95,13 +95,13 @@ From `NEX-COMPATIBILITY-MANIFEST.json` → `governance_reject_reason_codes`:
 | Code | Trigger | Test Coverage |
 |------|---------|---|
 | `ok` | Validation passed | ✅ `test_validate_with_reason_ok` |
-| `scopeguard_bad_signature` | HMAC mismatch | ✅ `test_validate_with_reason_bad_signature` |
-| `scopeguard_bad_expires_at` | Unparseable timestamp | ✅ `test_validate_with_reason_bad_expires_at` |
-| `scopeguard_expired` | `now >= expires_at` | ✅ Implicit in validator logic |
-| `scopeguard_operator_mismatch` | Token operator ≠ request operator | ✅ `test_validate_with_reason_operator_mismatch` |
-| `scopeguard_module_not_allowed` | Requested module not in token's `nex_modules` | ✅ `test_validate_with_reason_module_not_allowed` |
-| `scopeguard_target_out_of_scope` | Target IP / CIDR mismatch when `authorized_cidrs` present | ✅ Implicit in validator logic |
-| `scopeguard_validation_error` | Structural/type error | ✅ Implicit in validator error path |
+| `nex_bad_signature` | HMAC mismatch | ✅ `test_validate_with_reason_bad_signature` |
+| `nex_bad_expires_at` | Unparseable timestamp | ✅ `test_validate_with_reason_bad_expires_at` |
+| `nex_expired` | `now >= expires_at` | ✅ Implicit in validator logic |
+| `nex_operator_mismatch` | Token operator ≠ request operator | ✅ `test_validate_with_reason_operator_mismatch` |
+| `nex_module_not_allowed` | Requested module not in token's `nex_modules` | ✅ `test_validate_with_reason_module_not_allowed` |
+| `nex_target_out_of_scope` | Target IP / CIDR mismatch when `authorized_cidrs` present | ✅ Implicit in validator logic |
+| `nex_validation_error` | Structural/type error | ✅ Implicit in validator error path |
 
 **Function:** `validate_token_with_reason(envelope, hmac_key, target, operator_id, nex_module_ids) → (bool, str)`
 
@@ -113,11 +113,11 @@ From `NEX-COMPATIBILITY-MANIFEST.json` → `governance_reject_reason_codes`:
 
 | Step | Implementation | Status |
 |------|---|---|
-| Load allowlist | `scopeguard_allowlist_by_technique_class()` from manifest | ✅ Implemented |
-| Technique → NEX class | ScopeGuard category → ATT&CK technique class | ✅ Implemented |
+| Load allowlist | `nex_allowlist_by_technique_class()` from manifest | ✅ Implemented |
+| Technique → NEX class | Nex category → ATT&CK technique class | ✅ Implemented |
 | Filter authorized only | Only `authorization_status == "authorized"` | ✅ Implemented |
 | Derive modules | Union of allowlist entries for selected classes | ✅ Implemented |
-| Reject unknowns | Cross-check against `known_scopeguard_module_ids()` | ✅ Implemented |
+| Reject unknowns | Cross-check against `known_nex_module_ids()` | ✅ Implemented |
 
 **Test Coverage:**
 - ✅ `test_rejects_unknown_nex_module_ids_from_mapping` — verifies unknown module rejection with monkeypatch
@@ -229,18 +229,18 @@ pytest -q tests/test_nex_token_generation.py tests/test_scope_token_route.py
 
 ### Core Implementation Files
 
-1. **`scopeguard/nex_contract.py`**
+1. **`nex/nex_contract.py`**
    - Manifest loading and utility functions
-   - `scopeguard_allowlist_by_technique_class()` — technique class → NEX module allowlist
-   - `known_scopeguard_module_ids()` — complete set of known NEX capability IDs
+   - `nex_allowlist_by_technique_class()` — technique class → NEX module allowlist
+   - `known_nex_module_ids()` — complete set of known NEX capability IDs
    - `capability_to_d3fend_ids()` — capability → D3FEND mapping
    - `governance_reason_codes()` — manifest-defined reject reason codes
    - `strict_d3fend_required_non_empty()` — strict-mode requirement flag
 
-2. **`scopeguard/token_generator.py`**
+2. **`nex/token_generator.py`**
    - `TokenPayload` — dataclass for scope token content
    - `ScopeTokenEnvelope` — dataclass for full envelope with algorithm/signature
-   - `ScopeGuardEnvelopeValidator` — validation logic with reason codes
+   - `NexEnvelopeValidator` — validation logic with reason codes
    - `ScopeTokenGenerator` — main token generation engine
    - `generate_token_json()` — convenience function for JSON output
    - `generate_token_file()` — convenience function for file output
@@ -248,7 +248,7 @@ pytest -q tests/test_nex_token_generation.py tests/test_scope_token_route.py
 
 3. **`app/__init__.py`**
    - `/engagement/<eng_id>/generate/scope-token` route — Flask endpoint
-   - `_load_scopeguard_hmac_key()` — env var loading with validation
+   - `_load_nex_hmac_key()` — env var loading with validation
    - `_resolve_operator_id()` — identity resolution from engagement
 
 ### Test Files
@@ -278,9 +278,9 @@ pytest -q tests/test_nex_token_generation.py tests/test_scope_token_route.py
 
 | Variable | Required | Default | Purpose |
 |----------|----------|---------|---------|
-| `SCOPEGUARD_HMAC_SECRET` | Yes | — | 64-char hex HMAC-256 key (32 bytes) |
+| `NEX_HMAC_SECRET` | Yes | — | 64-char hex HMAC-256 key (32 bytes) |
 | `NEX_SCOPE_SECRET` | (fallback) | — | Alternative name for HMAC secret |
-| `SCOPEGUARD_TOKEN_TTL_SECONDS` | No | `3600` | Token validity duration in seconds |
+| `NEX_TOKEN_TTL_SECONDS` | No | `3600` | Token validity duration in seconds |
 | `NEX_OPERATOR_ID` | No | — | Override for operator identity in token |
 | `NEX_COMPLIANCE_STRICT` | No | `1` | Enable strict D3FEND validation (default ON) |
 
@@ -361,7 +361,7 @@ pytest -q tests/test_nex_token_generation.py tests/test_scope_token_route.py
 
 ## Conclusion
 
-**ScopeGuard is fully NEX-compatible.** All contract requirements from the compatibility artifacts have been implemented, tested, and verified. Token generation produces strict, deterministic, cryptographically-sound envelopes that conform to NEX governance semantics and data-protection requirements.
+**Nex is fully NEX-compatible.** All contract requirements from the compatibility artifacts have been implemented, tested, and verified. Token generation produces strict, deterministic, cryptographically-sound envelopes that conform to NEX governance semantics and data-protection requirements.
 
 **Recommended Next Steps:**
 1. Deploy with `NEX_COMPLIANCE_STRICT=1` in production

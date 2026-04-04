@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start ScopeGuard
+# Start Nex
 # Usage: bash run.sh
 
 set -e
