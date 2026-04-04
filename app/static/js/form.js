@@ -317,6 +317,9 @@ const SG = (() => {
     document.querySelectorAll('[data-conditional-field]').forEach(group => {
       const condField = group.dataset.conditionalField;
       const condValue = group.dataset.conditionalValue;
+      const condValues = (() => {
+        try { return JSON.parse(group.dataset.conditionalValues || 'null'); } catch (e) { return null; }
+      })();
       const condCond  = group.dataset.conditionalCondition;
 
       const controller = document.querySelector(
@@ -327,6 +330,11 @@ const SG = (() => {
       let show = false;
       if (condCond === 'present') {
         show = !!controller.value;
+      } else if (condValues && Array.isArray(condValues) && condValues.length) {
+        const actual = controller.type === 'checkbox'
+          ? String(controller.checked)
+          : controller.value;
+        show = condValues.includes(actual);
       } else {
         const actual = controller.type === 'checkbox'
           ? String(controller.checked)

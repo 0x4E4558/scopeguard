@@ -270,6 +270,7 @@
         <div class="field-group{% if field.conditional_on is defined %}" 
              data-conditional-field="{{ field.conditional_on.field }}"
              data-conditional-value="{{ field.conditional_on.get('value', '')|string|lower }}"
+             data-conditional-values="{{ field.conditional_on.get('values', [])|tojson }}"
              data-conditional-condition="{{ field.conditional_on.get('condition', '') }}"
              {% else %}"{% endif %}>
 
@@ -676,6 +677,7 @@
              {% if field.conditional_on is defined %}
              data-conditional-field="{{ field.conditional_on.field }}"
              data-conditional-value="{{ field.conditional_on.get('value', '')|string|lower }}"
+             data-conditional-values="{{ field.conditional_on.get('values', [])|tojson }}"
              data-conditional-condition="{{ field.conditional_on.get('condition', '') }}"
              {% endif %}>
           <label>
@@ -1588,6 +1590,7 @@
     if (field.conditional_on) {
       wrap.dataset.conditionalField     = field.conditional_on.field;
       wrap.dataset.conditionalValue     = field.conditional_on.value || '';
+      wrap.dataset.conditionalValues    = field.conditional_on.values ? JSON.stringify(field.conditional_on.values) : '';
       wrap.dataset.conditionalCondition = field.conditional_on.condition || '';
     }
 
