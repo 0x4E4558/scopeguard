@@ -381,6 +381,58 @@ def generate_document(eng_id, doc_type):
     )
 
 
+@app.route("/engagement/<eng_id>/generate/draft/<doc_type>")
+def generate_draft_document(eng_id, doc_type):
+    """Generate a printable draft document for client review and approval.
+
+    This route bypasses all signature and execution-status gates so that
+    documents can be printed and sent to the client at any stage of the
+    engagement workflow.  No execution token or scope binding is embedded;
+    the document is watermarked as DRAFT — PENDING SIGNATURE.
+    """
+    if doc_type not in ("sow", "roe"):
+        abort(404)
+
+    record = load_engagement(eng_id)
+    if record is None:
+        abort(404)
+
+    from app.hydrator import hydrate
+    from app.generator import generate_sow, generate_roe
+    import io as _io
+
+    try:
+        engagement = hydrate(record["data"])
+    except Exception as exc:
+        app.logger.error("Hydration failed for %s: %s", eng_id, exc, exc_info=True)
+        return jsonify({"error": "Draft generation failed",
+                        "message": "Engagement data could not be processed. "
+                                   "Re-save each section and try again."}), 422
+
+    eng_id_str = record["data"].get("identity", {}).get("engagement_id", eng_id[:8])
+
+    try:
+        if doc_type == "sow":
+            docx_bytes = generate_sow(engagement, draft=True)
+            filename = f"{eng_id_str}-Scope-of-Work-DRAFT.docx"
+        else:
+            docx_bytes = generate_roe(engagement, draft=True)
+            filename = f"{eng_id_str}-Rules-of-Engagement-DRAFT.docx"
+    except Exception as exc:
+        app.logger.error("Draft generation failed for %s (%s): %s",
+                         eng_id, doc_type, exc, exc_info=True)
+        return jsonify({"error": "Draft generation failed",
+                        "message": "An error occurred while building the document. "
+                                   "Check the server log for details."}), 500
+
+    return send_file(
+        _io.BytesIO(docx_bytes),
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
 @app.route("/engagement/<eng_id>/generate/scope-token")
 def generate_scope_token_route(eng_id):
     """Generate a NEX-compatible scope token envelope for an engagement."""

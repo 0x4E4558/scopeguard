@@ -43,7 +43,7 @@ RED_T  = RGBColor(0xC0, 0x00, 0x00)   # CONFIDENTIAL stamp
 # ── Header / Footer ───────────────────────────────────────────────────────────
 
 def _add_header_footer(doc_section, classification: str, doc_title: str,
-                        eng_id: str, version: str) -> None:
+                        eng_id: str, version: str, draft: bool = False) -> None:
     """Add classification header and page-number footer to a document section."""
     from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
@@ -51,13 +51,15 @@ def _add_header_footer(doc_section, classification: str, doc_title: str,
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.opc.constants import RELATIONSHIP_TYPE as RT
 
+    title_display = f"DRAFT — {doc_title}" if draft else doc_title
+
     # ── Header ──
     header = doc_section.header
     hp = header.paragraphs[0]
     hp.alignment = WD_ALIGN_PARAGRAPH.CENTER
     # Classification label
     r1 = hp.add_run(f"{'★  ' if classification in ('confidential','restricted') else ''}"
-                    f"{classification.upper()} — {doc_title}"
+                    f"{classification.upper()} — {title_display}"
                     f"{'  ★' if classification in ('confidential','restricted') else ''}")
     r1.font.size = Pt(8)
     r1.font.bold = True
@@ -400,7 +402,7 @@ def _contact_display(contact) -> str:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def generate_sow(eng: Engagement, scope_binding: dict | None = None,
-                 output_path: Path | None = None) -> bytes:
+                 output_path: Path | None = None, draft: bool = False) -> bytes:
     """Generate the Scope of Work document. Returns bytes.
 
     Args:
@@ -411,7 +413,12 @@ def generate_sow(eng: Engagement, scope_binding: dict | None = None,
                        header table and in Section 1.2 (Engagement Identification)
                        to cryptographically link the human-readable document to
                        the machine-enforceable scope.json.
+        draft:         When True, produce a printable draft for client review.
+                       Scope binding is suppressed and a DRAFT notice is added.
+                       The document is not saved to disk and no policy bundle is written.
     """
+    if draft:
+        scope_binding = None
     doc = DocxDocument()
 
     # ── Page setup ─────────────────────────────────────────────────────────────
@@ -434,9 +441,23 @@ def generate_sow(eng: Engagement, scope_binding: dict | None = None,
         doc_title="SCOPE OF WORK",
         eng_id=id_.engagement_id,
         version=id_.document_version,
+        draft=draft,
     )
 
     # ── Cover ──────────────────────────────────────────────────────────────────
+    if draft:
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r = p.add_run("DRAFT — PENDING CLIENT SIGNATURE")
+        r.bold = True; r.font.size = Pt(14); r.font.name = 'Arial'
+        r.font.color.rgb = RED_T
+        _notice_box(doc,
+            "THIS DOCUMENT IS A DRAFT SUBMITTED FOR CLIENT REVIEW AND APPROVAL. "
+            "IT IS NOT AUTHORIZED FOR EXECUTION. Execution tokens are withheld "
+            "pending receipt of signed authorization from all required signatories. "
+            "Upon approval, the client shall provide signature credentials to enable execution.")
+        doc.add_paragraph()
+
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r = p.add_run("PENETRATION TEST")
@@ -459,7 +480,8 @@ def generate_sow(eng: Engagement, scope_binding: dict | None = None,
         ("Document Version",     id_.document_version),
         ("Prepared By",          id_.prepared_by),
         ("Prepared Date",        _fmt_date(id_.prepared_date)),
-        ("Document Status",      id_.document_status.value.upper().replace("_", " ")),
+        ("Document Status",      "DRAFT — PENDING SIGNATURE" if draft
+                                  else id_.document_status.value.upper().replace("_", " ")),
     ] + ([
         ("Scope ID",             scope_binding["scope_id"]),
         ("Scope Hash (SHA-256)", scope_binding["scope_hash"]),
@@ -915,7 +937,7 @@ def generate_sow(eng: Engagement, scope_binding: dict | None = None,
     doc.save(buf)
     sow_bytes = buf.getvalue()
 
-    if output_path is not None:
+    if output_path is not None and not draft:
         output_path.write_bytes(sow_bytes)
         roe_path = output_path.parent / os.path.basename(
             output_path.name.replace("-sow.docx", "-roe.docx")
@@ -932,7 +954,7 @@ def generate_sow(eng: Engagement, scope_binding: dict | None = None,
 # ══════════════════════════════════════════════════════════════════════════════
 
 def generate_roe(eng: Engagement, scope_binding: dict | None = None,
-                 output_path: Path | None = None) -> bytes:
+                 output_path: Path | None = None, draft: bool = False) -> bytes:
     """Generate the Rules of Engagement document. Returns bytes.
 
     Args:
@@ -941,7 +963,12 @@ def generate_roe(eng: Engagement, scope_binding: dict | None = None,
                        with keys ``scope_id``, ``scope_hash``, and ``operator_id``.
                        When provided, these values are embedded in the cover table
                        to cryptographically link the ROE to scope.json.
+        draft:         When True, produce a printable draft for client review.
+                       Scope binding is suppressed and a DRAFT notice is added.
+                       The document is not saved to disk.
     """
+    if draft:
+        scope_binding = None
     doc = DocxDocument()
 
     section = doc.sections[0]
@@ -962,9 +989,23 @@ def generate_roe(eng: Engagement, scope_binding: dict | None = None,
         doc_title="RULES OF ENGAGEMENT",
         eng_id=id_.engagement_id,
         version=id_.document_version,
+        draft=draft,
     )
 
     # ── Cover ──────────────────────────────────────────────────────────────────
+    if draft:
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r = p.add_run("DRAFT — PENDING CLIENT SIGNATURE")
+        r.bold = True; r.font.size = Pt(14); r.font.name = 'Arial'
+        r.font.color.rgb = RED_T
+        _notice_box(doc,
+            "THIS DOCUMENT IS A DRAFT SUBMITTED FOR CLIENT REVIEW AND APPROVAL. "
+            "IT IS NOT AUTHORIZED FOR EXECUTION. Execution tokens are withheld "
+            "pending receipt of signed authorization from all required signatories. "
+            "Upon approval, the client shall provide signature credentials to enable execution.")
+        doc.add_paragraph()
+
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r = p.add_run("RULES OF ENGAGEMENT")
@@ -987,6 +1028,7 @@ def generate_roe(eng: Engagement, scope_binding: dict | None = None,
         ("Effective Date",      _fmt_date(per.authorized_start_date)),
         ("Expiration Date",     _fmt_date(per.retest_window_end or per.authorized_end_date)),
         ("Classification",      f"{id_.classification.value.upper()} — RESTRICTED"),
+        ("Document Status",     "DRAFT — PENDING SIGNATURE" if draft else "ACTIVE"),
     ] + ([
         ("Scope ID",             scope_binding["scope_id"]),
         ("Scope Hash (SHA-256)", scope_binding["scope_hash"]),
@@ -1323,7 +1365,7 @@ def generate_roe(eng: Engagement, scope_binding: dict | None = None,
     doc.save(buf)
     roe_bytes = buf.getvalue()
 
-    if output_path is not None:
+    if output_path is not None and not draft:
         output_path.write_bytes(roe_bytes)
         sow_path = output_path.parent / os.path.basename(
             output_path.name.replace("-roe.docx", "-sow.docx")
