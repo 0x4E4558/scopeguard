@@ -19,7 +19,8 @@ A local-only Flask application that guides penetration testing teams through bui
 
 ---
 
-## ⚡ NEX — Coming Soon
+<details>
+<summary><strong>⚡ NEX — Coming Soon</strong></summary>
 
 > **NEX is a proprietary third-party security platform currently under heavy development.**
 > It will not be released until its Arch-based `.iso` has been fully assembled, tested, and confirmed stable and bug-free.
@@ -70,9 +71,12 @@ ScopeGuard                                  NEX
 
 > 🚧 Screenshots of ScopeGuard and NEX running together will be added here once the platform reaches public release.
 
+</details>
+
 ---
 
-## Quick Start
+<details>
+<summary><strong>Quick Start</strong></summary>
 
 ```bash
 git clone https://github.com/0x4E4558/scopeguard.git
@@ -83,9 +87,12 @@ bash run.sh       # starts at http://127.0.0.1:5000
 
 **Requirements:** Python 3.10+ · No internet connection required · Data stored locally in `./data/scopeguard.db`
 
+</details>
+
 ---
 
-## Screenshots
+<details>
+<summary><strong>Screenshots</strong></summary>
 
 > 📸 **These screenshots will be replaced** with updated captures showing ScopeGuard and NEX running together once testing is complete.
 
@@ -97,9 +104,12 @@ bash run.sh       # starts at http://127.0.0.1:5000
 
 ![Pre-flight validation report](Screenshot_20260319_115540.png)
 
+</details>
+
 ---
 
-## What It Produces
+<details>
+<summary><strong>What It Produces</strong></summary>
 
 Two `.docx` documents per engagement, with classification headers and page-numbered footers on every page:
 
@@ -120,9 +130,12 @@ Two `.docx` documents per engagement, with classification headers and page-numbe
 - Prohibited actions, evidence collection standards, framework appendix
 - Safe harbor clause and emergency suspension protocol
 
+</details>
+
 ---
 
-## Sample Document Output
+<details>
+<summary><strong>Sample Document Output</strong></summary>
 
 The two `.docx` files in this repository (`03172026-SIS-001-Scope-of-Work.docx` and `03172026-SIS-001-Rules-of-Engagement.docx`) are real output from ScopeGuard. Below is a cutaway of each.
 
@@ -252,9 +265,12 @@ The two `.docx` files in this repository (`03172026-SIS-001-Scope-of-Work.docx` 
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+</details>
+
 ---
 
-## Sections
+<details>
+<summary><strong>Sections</strong></summary>
 
 ### 01 — Engagement Identity
 - **Engagement Type** — visible button selection: External · Internal · Web App · Full Scope · Red Team · Vulnerability Assessment
@@ -344,9 +360,12 @@ Applies when SE vectors are authorized in Techniques. All employees are in scope
 - **USB Drop** — payload type required (inert / macro / executable)
 - **Exclusion List** — explicitly list anyone excluded from SE testing
 
+</details>
+
 ---
 
-## Pre-Flight Report
+<details>
+<summary><strong>Pre-Flight Report</strong></summary>
 
 Available at any time. Findings are classified:
 
@@ -357,9 +376,12 @@ Available at any time. Findings are classified:
 | **MISSING** | Required field not yet filled |
 | **NOTE** | Advisory — verify intentionality |
 
+</details>
+
 ---
 
-## Validation Rules
+<details>
+<summary><strong>Validation Rules</strong></summary>
 
 ### Field-Level (VAL-001 – VAL-021)
 CIDR validity and mask agreement · VLAN count consistency · Date ordering (start/end, draft/final) · Testing hour ordering · Tester IP format · Email format · Conditional technique requirements · Maintenance window references · Credential reporting window · Third-party disclosure · USB executable authorization · Signature completeness · Required contact roles per engagement type · Client-provisioned asset delivery · Full-scope physical location requirement · SE exclusion list · Phishing sub-fields · Vishing/Impersonation/USB sub-fields · Maintenance window activities · Physical location notification fields
@@ -367,17 +389,23 @@ CIDR validity and mask agreement · VLAN count consistency · Date ordering (sta
 ### Cross-Reference (XRF-001 – XRF-016)
 CIDR overlap · Subnet containment · Maintenance window technique references · Window dates within engagement period · Notification recipient resolution · Retest window bounds · Blackout date bounds · Physical security manager contact · Attorney of Record contact · Third-party facility notification · Notification lead time definitions · Supernet overlap · Tester source IPs for network techniques · HIPAA declaration · PCI-DSS CDE scope decision
 
+</details>
+
 ---
 
-## Legal Protections Built In
+<details>
+<summary><strong>Legal Protections Built In</strong></summary>
 
 **SOW:** Authorization/CFAA defense · Law Enforcement Contact & Client Intervention Obligation (Coalfire/Iowa protection) · Indemnification · Limitation of Liability · Findings Validity (point-in-time) · Confidentiality/NDA · Governing Law · Entire Agreement
 
 **ROE:** Scope of Authorization Safe Harbor (5-element checklist) · Immediate Suspension & Detention Guidance
 
+</details>
+
 ---
 
-## Running Tests
+<details>
+<summary><strong>Running Tests</strong></summary>
 
 ```bash
 python3 run_tests.py
@@ -387,9 +415,12 @@ python3 run_tests.py
 
 Coverage: All 20 field-level rules (VAL-001–VAL-020) · All 16 cross-reference rules (XRF-001–XRF-016) · Form builder field types · Technique catalog schema integrity · Physical location activity options · Document generation content · Route integration for all 10 sections + preflight + document generation · 3 milestone tests
 
+</details>
+
 ---
 
-## Architecture
+<details>
+<summary><strong>Architecture</strong></summary>
 
 ```
 .
@@ -436,15 +467,21 @@ Coverage: All 20 field-level rules (VAL-001–VAL-020) · All 16 cross-reference
 └── run.sh                   # Start application
 ```
 
+</details>
+
 ---
 
-## Data & Privacy
+<details>
+<summary><strong>Data &amp; Privacy</strong></summary>
 
 All data is stored locally in `./data/scopeguard.db` (SQLite). No network connections are made at runtime. No data leaves your machine. All fonts (DM Sans and JetBrains Mono) are served from `app/static/fonts/` — no external requests are made.
 
+</details>
+
 ---
 
-## Version History
+<details>
+<summary><strong>Version History</strong></summary>
 
 **v2.0** — March 2026
 - Technique section rebuilt as a 50-technique / 7-category matrix — select all at once, no repetitive card creation
@@ -461,3 +498,5 @@ All data is stored locally in `./data/scopeguard.db` (SQLite). No network connec
 
 **v1.0** — January 2026
 - Initial release: validation engine, intake form, pre-flight report, document generation
+
+</details>
