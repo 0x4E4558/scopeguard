@@ -96,13 +96,13 @@ bash run.sh       # starts at http://127.0.0.1:5000
 
 > 📸 **These screenshots will be replaced** with updated captures showing ScopeGuard and NEX running together once testing is complete.
 
-**Engagement intake form — technique authorization matrix**
+**Main engagements screen**
 
-![Technique authorization matrix](Screenshot_20260319_115434.png)
+![Main engagements screen](Screenshot_20260319_115434.png)
 
-**Pre-flight report — findings grouped by severity before document generation**
+**Engagement identity screen**
 
-![Pre-flight validation report](Screenshot_20260319_115540.png)
+![Engagement identity screen](Screenshot_20260319_115540.png)
 
 </details>
 
