@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from datetime import date
 
 import pytest
 
@@ -47,6 +48,37 @@ def _seed_engagement_from_fixture(fixture_name: str) -> str:
     return row_id
 
 
+def _seed_signed_engagement_from_fixture(fixture_name: str) -> str:
+    from app.storage import create_engagement, save_section
+
+    fixture_path = Path(__file__).parent / "fixtures" / f"{fixture_name}.json"
+    data = json.loads(fixture_path.read_text())
+
+    identity = data["identity"]
+    identity.update({
+        "document_status": "executed",
+        "client_signatory_name": "Client Signatory",
+        "client_signatory_date": date.today().isoformat(),
+        "tester_lead_signatory_name": "Tester Lead",
+        "tester_lead_signatory_date": date.today().isoformat(),
+        "tester_principal_signatory_name": "Tester Principal",
+        "tester_principal_signatory_date": date.today().isoformat(),
+        "client_signatory_signature": "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo9PQ==",
+        "client_signatory_public_key": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtestclientkeymaterial\n-----END PUBLIC KEY-----",
+        "tester_lead_signatory_signature": "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo9PQ==",
+        "tester_lead_signatory_public_key": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtestleadkeymaterial\n-----END PUBLIC KEY-----",
+        "tester_principal_signatory_signature": "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo9PQ==",
+        "tester_principal_signatory_public_key": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtestprincipalkeymaterial\n-----END PUBLIC KEY-----",
+        "document_creator_signature": "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo9PQ==",
+        "document_creator_public_key": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtestcreatorkeymaterial\n-----END PUBLIC KEY-----",
+    })
+
+    row_id = create_engagement()
+    for section_id, section_data in data.items():
+        save_section(row_id, section_id, section_data)
+    return row_id
+
+
 def test_scope_token_route_rejects_when_blocked(app_client):
     from app.storage import create_engagement
 
@@ -58,8 +90,19 @@ def test_scope_token_route_rejects_when_blocked(app_client):
     assert body["error"] == "Token generation blocked"
 
 
-def test_scope_token_route_returns_strict_envelope(app_client):
+def test_scope_token_route_rejects_unsigned_documents(app_client):
     row_id = _seed_engagement_from_fixture("mcb")
+
+    resp = app_client.get(f"/engagement/{row_id}/generate/scope-token")
+
+    assert resp.status_code == 422
+    body = resp.get_json()
+    assert body["error"] == "Token generation blocked"
+    assert "signed" in body["message"].lower()
+
+
+def test_scope_token_route_returns_strict_envelope(app_client):
+    row_id = _seed_signed_engagement_from_fixture("mcb")
 
     resp = app_client.get(f"/engagement/{row_id}/generate/scope-token")
 
@@ -91,6 +134,18 @@ def test_scope_token_route_returns_strict_envelope(app_client):
     assert isinstance(payload["allowed_targets"], list) and payload["allowed_targets"]
     if "authorized_cidrs" in payload:
         assert isinstance(payload["authorized_cidrs"], list)
+
+
+def test_document_routes_require_signed_documents(app_client):
+    row_id = _seed_engagement_from_fixture("mcb")
+
+    sow_resp = app_client.get(f"/engagement/{row_id}/generate/sow")
+    roe_resp = app_client.get(f"/engagement/{row_id}/generate/roe")
+
+    assert sow_resp.status_code == 422
+    assert roe_resp.status_code == 422
+    assert "signed" in sow_resp.get_json()["message"].lower()
+    assert "signed" in roe_resp.get_json()["message"].lower()
 
 
 def test_scope_token_route_rejects_without_secret(tmp_path, monkeypatch):

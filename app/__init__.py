@@ -26,6 +26,7 @@ from app.form_builder import get_all_sections, get_section_fields, SECTION_IDS
 from app.hydrator import hydrate
 from scopeguard.validator import Validator
 from scopeguard.finding import Severity
+from scopeguard.models import DocumentStatus
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 # Secret key: prefer an environment variable so it stays stable across restarts.
@@ -44,12 +45,17 @@ def _get_hmac_key() -> bytes:
     """Return the HMAC key for scope token signing.
 
     Resolution order:
-      1. SCOPEGUARD_HMAC_KEY environment variable (hex-encoded).
+        1. SCOPEGUARD_HMAC_SECRET / NEX_SCOPE_SECRET / SCOPEGUARD_HMAC_KEY
+            environment variable (hex-encoded).
       2. data/hmac.key file (hex-encoded, one line).
       3. Development fallback: a deterministic key derived from app.secret_key.
          This is NOT suitable for production; set SCOPEGUARD_HMAC_KEY in prod.
     """
-    env_key = os.environ.get("SCOPEGUARD_HMAC_KEY", "").strip()
+    env_key = (
+        os.environ.get("SCOPEGUARD_HMAC_SECRET", "").strip()
+        or os.environ.get("NEX_SCOPE_SECRET", "").strip()
+        or os.environ.get("SCOPEGUARD_HMAC_KEY", "").strip()
+    )
     if env_key:
         return bytes.fromhex(env_key)
 
@@ -61,6 +67,25 @@ def _get_hmac_key() -> bytes:
     # Development fallback — not for production use
     import hashlib
     return hashlib.sha256(app.secret_key.encode("utf-8")).digest()
+
+
+def _require_signed_documents(engagement, action_label: str):
+    """Reject actions that depend on fully executed SOW/ROE signatures."""
+    identity = engagement.identity
+    if (
+        identity.document_status != DocumentStatus.EXECUTED
+        or not identity.all_signatures_present()
+        or not identity.all_cryptographic_signatures_present()
+    ):
+        return jsonify({
+            "error": f"{action_label} blocked",
+            "message": (
+                "The SOW and ROE must be fully signed (human sign-off plus "
+                "cryptographic signatures/public keys for required signers) "
+                "before this action can proceed."
+            ),
+        }), 422
+    return None
 
 
 # ─── Home ─────────────────────────────────────────────────────────────────────
@@ -273,19 +298,13 @@ def generate_document(eng_id, doc_type):
         abort(404)
 
     findings = _run_validation(record["data"])
-    if findings.blocks_generation():
-        missing_count = len(findings.missing())
+    if findings.has_blockers():
         block_count   = len(findings.blockers())
         return jsonify({
             "error": "Document generation blocked",
             "blockers": block_count,
-            "missing": missing_count,
             "message": (
-                "Resolve all BLOCK and MISSING findings before generating documents."
-                if block_count and missing_count
-                else "Resolve all BLOCK findings before generating documents."
-                if block_count
-                else "Complete all MISSING required fields before generating documents."
+                "Resolve all BLOCK findings before generating documents."
             ),
         }), 422
 
@@ -301,6 +320,10 @@ def generate_document(eng_id, doc_type):
         return jsonify({"error": "Document generation failed",
                         "message": "Engagement data could not be processed. "
                                    "Re-save each section and try again."}), 422
+
+    signed_block = _require_signed_documents(engagement, "Document generation")
+    if signed_block is not None:
+        return signed_block
 
     eng_id_str = record["data"].get("identity", {}).get("engagement_id", eng_id[:8])
 
@@ -356,6 +379,60 @@ def generate_document(eng_id, doc_type):
         as_attachment=True,
         download_name=filename,
     )
+
+
+@app.route("/engagement/<eng_id>/generate/scope-token")
+def generate_scope_token_route(eng_id):
+    """Generate a NEX-compatible scope token envelope for an engagement."""
+    record = load_engagement(eng_id)
+    if record is None:
+        abort(404)
+
+    findings = _run_validation(record["data"])
+    if findings.has_blockers():
+        return jsonify({
+            "error": "Token generation blocked",
+            "blockers": len(findings.blockers()),
+            "message": "Resolve all BLOCK findings before generating tokens.",
+        }), 422
+
+    env_key = (
+        os.environ.get("SCOPEGUARD_HMAC_SECRET", "").strip()
+        or os.environ.get("NEX_SCOPE_SECRET", "").strip()
+        or os.environ.get("SCOPEGUARD_HMAC_KEY", "").strip()
+    )
+    if not env_key:
+        return jsonify({
+            "error": "Token generation blocked",
+            "message": (
+                "Set SCOPEGUARD_HMAC_SECRET (or NEX_SCOPE_SECRET) before "
+                "requesting a scope token."
+            ),
+        }), 422
+
+    from scopeguard.token_generator import generate_token_json
+
+    try:
+        engagement = hydrate(record["data"])
+        signed_block = _require_signed_documents(engagement, "Token generation")
+        if signed_block is not None:
+            return signed_block
+        operator = engagement.contact_by_role("engagement_lead")
+        token_json = generate_token_json(
+            engagement=engagement,
+            operator_id=(operator.full_name if operator else engagement.identity.engagement_id),
+            hmac_key=bytes.fromhex(env_key),
+            scope_id=None,
+        )
+    except Exception as exc:
+        app.logger.error("Scope token generation failed for %s: %s", eng_id, exc, exc_info=True)
+        return jsonify({
+            "error": "Token generation blocked",
+            "message": "Engagement data could not be processed. Re-save each section and try again.",
+        }), 422
+
+    return app.response_class(token_json, mimetype="application/json")
+
 # ─── Delete ───────────────────────────────────────────────────────────────────
 
 @app.route("/engagement/<eng_id>/delete", methods=["POST"])
@@ -392,6 +469,9 @@ def scope_artifact(eng_id):
 
     try:
         engagement = hydrate(record["data"])
+        signed_block = _require_signed_documents(engagement, "Scope compilation")
+        if signed_block is not None:
+            return signed_block
         timestamp = datetime.now(timezone.utc).replace(tzinfo=None)
         artifact = compile_scope(engagement, timestamp, _get_hmac_key())
     except ScopeCompilationError:
@@ -439,6 +519,9 @@ def nex_export(eng_id):
 
     try:
         engagement = hydrate(record["data"])
+        signed_block = _require_signed_documents(engagement, "Nex export")
+        if signed_block is not None:
+            return signed_block
         timestamp = datetime.now(timezone.utc).replace(tzinfo=None)
         artifact = compile_scope(engagement, timestamp, _get_hmac_key())
     except ScopeCompilationError:

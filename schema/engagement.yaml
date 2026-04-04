@@ -108,7 +108,7 @@ fields:
       - pending_review
       - pending_signature
       - executed
-    description: "'executed' status requires all signature fields populated."
+    description: "'executed' status requires all human-readable and cryptographic signature fields populated."
 
   prepared_by:
     type: string
@@ -127,3 +127,115 @@ fields:
     auto_populate: true
     immutable: true
     description: "Auto-populated. Records the schema version this engagement was created under."
+
+  client_signatory_name:
+    type: string
+    required: true
+    conditional_on:
+      field: document_status
+      value: executed
+    description: "Human-readable client signatory name shown in SOW/ROE."
+
+  client_signatory_date:
+    type: date
+    required: true
+    conditional_on:
+      field: document_status
+      value: executed
+    description: "Human-readable client signature date shown in SOW/ROE."
+
+  tester_lead_signatory_name:
+    type: string
+    required: true
+    conditional_on:
+      field: document_status
+      value: executed
+    description: "Human-readable testing lead signatory name shown in SOW/ROE."
+
+  tester_lead_signatory_date:
+    type: date
+    required: true
+    conditional_on:
+      field: document_status
+      value: executed
+    description: "Human-readable testing lead signature date shown in SOW/ROE."
+
+  tester_principal_signatory_name:
+    type: string
+    required: true
+    conditional_on:
+      field: document_status
+      value: executed
+    description: "Human-readable testing principal signatory name shown in SOW/ROE."
+
+  tester_principal_signatory_date:
+    type: date
+    required: true
+    conditional_on:
+      field: document_status
+      value: executed
+    description: "Human-readable testing principal signature date shown in SOW/ROE."
+
+  client_signatory_signature:
+    type: string
+    required: true
+    conditional_on:
+      field: document_status
+      value: executed
+    description: "Detached cryptographic signature from the client authorizing party (hex or base64)."
+
+  client_signatory_public_key:
+    type: string
+    required: true
+    conditional_on:
+      field: document_status
+      value: executed
+    description: "PEM public key corresponding to the client detached signature."
+
+  tester_lead_signatory_signature:
+    type: string
+    required: true
+    conditional_on:
+      field: document_status
+      value: executed
+    description: "Detached cryptographic signature from the testing lead signatory (hex or base64)."
+
+  tester_lead_signatory_public_key:
+    type: string
+    required: true
+    conditional_on:
+      field: document_status
+      value: executed
+    description: "PEM public key corresponding to the tester lead detached signature."
+
+  tester_principal_signatory_signature:
+    type: string
+    required: true
+    conditional_on:
+      field: document_status
+      value: executed
+    description: "Detached cryptographic signature from the testing principal signatory (hex or base64)."
+
+  tester_principal_signatory_public_key:
+    type: string
+    required: true
+    conditional_on:
+      field: document_status
+      value: executed
+    description: "PEM public key corresponding to the tester principal detached signature."
+
+  document_creator_signature:
+    type: string
+    required: true
+    conditional_on:
+      field: document_status
+      value: executed
+    description: "Detached cryptographic signature from the document creator (hex or base64)."
+
+  document_creator_public_key:
+    type: string
+    required: true
+    conditional_on:
+      field: document_status
+      value: executed
+    description: "PEM public key corresponding to the document creator detached signature."

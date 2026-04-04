@@ -193,6 +193,7 @@ def _authorization_basis(engagement: Engagement) -> dict:
     return {
         "document_status":         status,
         "authorization_signed":    engagement.identity.all_signatures_present(),
+        "authorization_crypto_signed": engagement.identity.all_cryptographic_signatures_present(),
         "engagement_type":         (engagement.identity.engagement_type.value
                                     if hasattr(engagement.identity.engagement_type, "value")
                                     else str(engagement.identity.engagement_type)),
@@ -200,6 +201,7 @@ def _authorization_basis(engagement: Engagement) -> dict:
         "client_signatory_name":   engagement.identity.client_signatory_name or "",
         "tester_lead_signatory":   engagement.identity.tester_lead_signatory_name or "",
         "all_signatures_present":  engagement.identity.all_signatures_present(),
+        "all_cryptographic_signatures_present": engagement.identity.all_cryptographic_signatures_present(),
     }
 
 

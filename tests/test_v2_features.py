@@ -560,7 +560,7 @@ class TestRouteRendering:
 
 # ─── Export / Import / Duplicate routes ──────────────────────────────────────
 
-class TestExportImportDuplicate(TestSectionRendering):
+class TestExportImportDuplicate(TestRouteRendering):
     """Export, import and duplicate engagement endpoints."""
 
     def test_export_returns_json(self):

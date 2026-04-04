@@ -24,6 +24,8 @@ from .finding import Finding, FindingList, Severity
 
 # RFC 5322-ish email pattern (practical, not exhaustive)
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_HEX_RE = re.compile(r"^[0-9a-fA-F]+$")
+_B64_RE = re.compile(r"^[A-Za-z0-9+/=]+$")
 
 # Vague condition phrases to reject
 _VAGUE_PHRASES = [
@@ -90,6 +92,27 @@ def _same_supernet_16(cidr_a: str, cidr_b: str) -> bool:
 
 def _valid_email(email: str) -> bool:
     return bool(_EMAIL_RE.match(email))
+
+
+def _looks_like_pem_public_key(value: str) -> bool:
+    v = (value or "").strip()
+    return (
+        "-----BEGIN PUBLIC KEY-----" in v
+        and "-----END PUBLIC KEY-----" in v
+    )
+
+
+def _looks_like_detached_signature(value: str) -> bool:
+    v = (value or "").strip()
+    if not v:
+        return False
+    # Accept hex signatures (e.g. raw ECDSA/EdDSA output encoded as hex)
+    if len(v) >= 64 and len(v) % 2 == 0 and _HEX_RE.fullmatch(v):
+        return True
+    # Accept base64 signatures (typical detached signature transport)
+    if len(v) >= 32 and _B64_RE.fullmatch(v):
+        return True
+    return False
 
 
 def _within_period(d: date, start: datetime, end: datetime) -> bool:
@@ -372,14 +395,19 @@ class Validator:
                     )
 
             # VAL-010: maintenance-window-required technique must reference a window
-            if tech.maintenance_window_required and not tech.maintenance_window_ref:
-                self._add(
-                    "VAL-010", Severity.BLOCK,
-                    f"Technique '{tech.technique_name}' ({tech.technique_id}) requires "
-                    f"a maintenance window but no window is referenced.",
-                    "Define at least one maintenance window before authorizing this technique.",
-                    field_path=f"{path}.maintenance_window_ref",
+            if tech.maintenance_window_required:
+                window_ref = tech.maintenance_window_ref
+                has_window = bool(window_ref) and any(
+                    mw.window_id == window_ref for mw in self.e.maintenance_windows
                 )
+                if not has_window:
+                    self._add(
+                        "VAL-010", Severity.BLOCK,
+                        f"Technique '{tech.technique_name}' ({tech.technique_id}) requires "
+                        f"a maintenance window but no valid window is referenced.",
+                        "Define at least one maintenance window and reference it before authorizing this technique.",
+                        field_path=f"{path}.maintenance_window_ref",
+                    )
 
     def _val_data_governance(self) -> None:
         dg = self.e.data_governance
@@ -437,15 +465,15 @@ class Validator:
 
         # VAL-019: when phishing is authorized, demand all required phishing fields
         if se.phishing_authorized:
-            if not se.phishing_target_list_due_date:
+            if se.phishing_target_departments and not se.phishing_target_list_due_date:
                 self._add(
                     "VAL-019", Severity.MISSING,
-                    "Phishing is authorized — target list delivery date is required.",
+                    "Phishing target departments are defined but the target list delivery date is missing.",
                     "Enter the date the client will deliver the phishing target list. "
-                    "This is required before testing can proceed.",
+                    "This is required before testing can proceed once phishing targets are specified.",
                     field_path="social_engineering.phishing_target_list_due_date",
                 )
-            if not se.phishing_target_departments:
+            if se.phishing_target_departments is not None and not se.phishing_target_departments:
                 self._add(
                     "VAL-019b", Severity.MISSING,
                     "Phishing is authorized — target departments must be specified.",
@@ -484,15 +512,45 @@ class Validator:
     def _val_document_status(self) -> None:
         # VAL-014: executed status requires all signature fields
         if self.e.identity.document_status == DocumentStatus.EXECUTED:
-            if not self.e.identity.all_signatures_present():
+            if (
+                not self.e.identity.all_signatures_present()
+                or not self.e.identity.all_cryptographic_signatures_present()
+            ):
                 self._add(
                     "VAL-014", Severity.BLOCK,
-                    "document_status is 'executed' but one or more signature fields "
-                    "are empty.",
-                    "All required signature fields must be populated before status can "
+                    "document_status is 'executed' but one or more required human "
+                    "or cryptographic signatures are missing.",
+                    "All required signatory names/dates and signer cryptographic "
+                    "signature + public-key fields must be populated before status can "
                     "be set to 'executed'.",
                     field_path="identity.document_status",
                 )
+            else:
+                identity = self.e.identity
+                crypto_fields = [
+                    ("identity.client_signatory_signature", identity.client_signatory_signature, "signature"),
+                    ("identity.client_signatory_public_key", identity.client_signatory_public_key, "public_key"),
+                    ("identity.tester_lead_signatory_signature", identity.tester_lead_signatory_signature, "signature"),
+                    ("identity.tester_lead_signatory_public_key", identity.tester_lead_signatory_public_key, "public_key"),
+                    ("identity.tester_principal_signatory_signature", identity.tester_principal_signatory_signature, "signature"),
+                    ("identity.tester_principal_signatory_public_key", identity.tester_principal_signatory_public_key, "public_key"),
+                    ("identity.document_creator_signature", identity.document_creator_signature, "signature"),
+                    ("identity.document_creator_public_key", identity.document_creator_public_key, "public_key"),
+                ]
+                for field_path, value, ftype in crypto_fields:
+                    if ftype == "public_key":
+                        ok = _looks_like_pem_public_key(value or "")
+                        expected = "PEM-formatted public key"
+                    else:
+                        ok = _looks_like_detached_signature(value or "")
+                        expected = "detached signature (hex or base64)"
+                    if not ok:
+                        self._add(
+                            "VAL-014", Severity.BLOCK,
+                            f"{field_path} is not a valid {expected}.",
+                            "Provide a cryptographically valid signer artifact in the expected format.",
+                            field_path=field_path,
+                        )
 
     def _val_assets_delivery(self) -> None:
         # VAL-016: client-provisioned asset with no confirmed delivery

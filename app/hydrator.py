@@ -120,6 +120,14 @@ def hydrate(data: dict) -> Engagement:
         tester_lead_signatory_date=_d(id_data.get("tester_lead_signatory_date")),
         tester_principal_signatory_name=id_data.get("tester_principal_signatory_name"),
         tester_principal_signatory_date=_d(id_data.get("tester_principal_signatory_date")),
+        client_signatory_signature=id_data.get("client_signatory_signature"),
+        client_signatory_public_key=id_data.get("client_signatory_public_key"),
+        tester_lead_signatory_signature=id_data.get("tester_lead_signatory_signature"),
+        tester_lead_signatory_public_key=id_data.get("tester_lead_signatory_public_key"),
+        tester_principal_signatory_signature=id_data.get("tester_principal_signatory_signature"),
+        tester_principal_signatory_public_key=id_data.get("tester_principal_signatory_public_key"),
+        document_creator_signature=id_data.get("document_creator_signature"),
+        document_creator_public_key=id_data.get("document_creator_public_key"),
     )
 
     # ── Period ────────────────────────────────────────────────────────────────

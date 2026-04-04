@@ -358,6 +358,13 @@ class TestVAL013:
 # ─── VAL-014: Executed status requires all signatures ────────────────────────
 
 class TestVAL014:
+    _SIG = "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo9PQ=="
+    _PK = (
+        "-----BEGIN PUBLIC KEY-----\n"
+        "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtestkeymaterial\n"
+        "-----END PUBLIC KEY-----"
+    )
+
     def test_pending_status_no_trigger(self, mcb_engagement):
         """MCB is pending_signature — VAL-014 should not fire."""
         findings = validate(mcb_engagement)
@@ -378,8 +385,39 @@ class TestVAL014:
         eng.identity.tester_lead_signatory_date = date(2026, 4, 1)
         eng.identity.tester_principal_signatory_name = "RSG Director"
         eng.identity.tester_principal_signatory_date = date(2026, 4, 1)
+        eng.identity.client_signatory_signature = self._SIG
+        eng.identity.client_signatory_public_key = self._PK
+        eng.identity.tester_lead_signatory_signature = self._SIG
+        eng.identity.tester_lead_signatory_public_key = self._PK
+        eng.identity.tester_principal_signatory_signature = self._SIG
+        eng.identity.tester_principal_signatory_public_key = self._PK
+        eng.identity.document_creator_signature = self._SIG
+        eng.identity.document_creator_public_key = self._PK
         findings = validate(eng)
         assert not has_rule(findings, "VAL-014")
+
+    def test_bad_crypto_signature_format_detected(self, mcb_engagement):
+        from datetime import date
+        eng = copy.deepcopy(mcb_engagement)
+        eng.identity.document_status = DocumentStatus.EXECUTED
+        eng.identity.client_signatory_name = "Sandra K. Whitfield"
+        eng.identity.client_signatory_date = date(2026, 4, 1)
+        eng.identity.tester_lead_signatory_name = "Marcus T. Holloway"
+        eng.identity.tester_lead_signatory_date = date(2026, 4, 1)
+        eng.identity.tester_principal_signatory_name = "RSG Director"
+        eng.identity.tester_principal_signatory_date = date(2026, 4, 1)
+
+        eng.identity.client_signatory_signature = "not-a-valid-signature"
+        eng.identity.client_signatory_public_key = self._PK
+        eng.identity.tester_lead_signatory_signature = self._SIG
+        eng.identity.tester_lead_signatory_public_key = self._PK
+        eng.identity.tester_principal_signatory_signature = self._SIG
+        eng.identity.tester_principal_signatory_public_key = self._PK
+        eng.identity.document_creator_signature = self._SIG
+        eng.identity.document_creator_public_key = self._PK
+
+        findings = validate(eng)
+        assert has_rule(findings, "VAL-014")
 
 
 # ─── VAL-015: Required contact roles present ─────────────────────────────────

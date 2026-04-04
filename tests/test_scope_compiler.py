@@ -249,6 +249,14 @@ class TestAuthorizationBasis:
         basis = art.scope["authorization_basis"]
         assert isinstance(basis["all_signatures_present"], bool)
 
+    def test_crypto_signature_fields_present(self, mcb_engagement):
+        art = compile_scope(mcb_engagement, _TEST_TS, _TEST_KEY)
+        basis = art.scope["authorization_basis"]
+        assert "authorization_crypto_signed" in basis
+        assert "all_cryptographic_signatures_present" in basis
+        assert isinstance(basis["authorization_crypto_signed"], bool)
+        assert isinstance(basis["all_cryptographic_signatures_present"], bool)
+
 
 # ─── Fail-closed on missing required fields ───────────────────────────────────
 

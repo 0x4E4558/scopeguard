@@ -115,6 +115,19 @@ _PREFIX_MAP = {
     "PHY-":  "RECON",
 }
 
+# Compatibility aliases used by older fixtures and legacy exports.
+# These are normalized before prefix matching so we do not silently drop
+# authorised techniques when a historical TECH-* identifier is encountered.
+_ALIAS_PREFIX_MAP = {
+    "TECH-RECON-":  "REC-",
+    "TECH-VULN-":   "VS-",
+    "TECH-EXPLOIT-": "EXP-",
+    "TECH-POST-":   "PE-",
+    "TECH-DOS-":    "DOS-",
+    "TECH-SE-":     "SE-",
+    "TECH-PHYS-":   "PHY-",
+}
+
 # Exact technique_id overrides for PE-* (post-exploitation sub-split).
 _PE_EXACT_MAP = {
     "PE-001": "LATERAL_MOVEMENT",
@@ -218,6 +231,13 @@ def map_techniques(techniques: List[Any]) -> List[Any]:
             continue
 
         tid = tech.technique_id
+
+        # Normalise older TECH-* aliases onto the current catalogue prefixes
+        # before applying the canonical mapping tables below.
+        for alias_prefix, canonical_prefix in _ALIAS_PREFIX_MAP.items():
+            if tid.startswith(alias_prefix):
+                tid = canonical_prefix + tid[len(alias_prefix):]
+                break
 
         # PE-* exact match first.
         if tid in _PE_EXACT_MAP:

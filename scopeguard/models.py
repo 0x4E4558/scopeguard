@@ -123,11 +123,34 @@ class EngagementIdentity:
     tester_principal_signatory_name: Optional[str] = None
     tester_principal_signatory_date: Optional[date] = None
 
+    # Cryptographic signatures are required for an executed engagement.
+    # Each signer must provide both a detached signature and a public key.
+    client_signatory_signature: Optional[str] = None
+    client_signatory_public_key: Optional[str] = None
+    tester_lead_signatory_signature: Optional[str] = None
+    tester_lead_signatory_public_key: Optional[str] = None
+    tester_principal_signatory_signature: Optional[str] = None
+    tester_principal_signatory_public_key: Optional[str] = None
+    document_creator_signature: Optional[str] = None
+    document_creator_public_key: Optional[str] = None
+
     def all_signatures_present(self) -> bool:
         return all([
             self.client_signatory_name, self.client_signatory_date,
             self.tester_lead_signatory_name, self.tester_lead_signatory_date,
             self.tester_principal_signatory_name, self.tester_principal_signatory_date,
+        ])
+
+    def all_cryptographic_signatures_present(self) -> bool:
+        return all([
+            self.client_signatory_signature,
+            self.client_signatory_public_key,
+            self.tester_lead_signatory_signature,
+            self.tester_lead_signatory_public_key,
+            self.tester_principal_signatory_signature,
+            self.tester_principal_signatory_public_key,
+            self.document_creator_signature,
+            self.document_creator_public_key,
         ])
 
 

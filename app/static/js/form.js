@@ -12,6 +12,29 @@ const SG = (() => {
   let _saveInProgress = false;
   let _panelCollapsed = true;
 
+  const _IDENTITY_SIGN_FIELDS = {
+    human: [
+      'client_signatory_name',
+      'client_signatory_date',
+      'tester_lead_signatory_name',
+      'tester_lead_signatory_date',
+      'tester_principal_signatory_name',
+      'tester_principal_signatory_date',
+    ],
+    cryptoSignatures: [
+      'client_signatory_signature',
+      'tester_lead_signatory_signature',
+      'tester_principal_signatory_signature',
+      'document_creator_signature',
+    ],
+    cryptoKeys: [
+      'client_signatory_public_key',
+      'tester_lead_signatory_public_key',
+      'tester_principal_signatory_public_key',
+      'document_creator_public_key',
+    ],
+  };
+
   // ── Init ────────────────────────────────────────────────────────────────────
 
   function init(engId, sectionId) {
@@ -23,6 +46,7 @@ const SG = (() => {
     _initMultiselects();
     _initMultiselectOther();
     _initFindingsPanel();
+    _initIdentitySignatureGuardrails();
 
     // Autosave on any input change — use document-level delegation so
     // dynamically added inputs (new list items) are covered automatically.
@@ -47,6 +71,7 @@ const SG = (() => {
     if (el.classList.contains('tags-input')) return;
     // Skip the multiselect Other input (save triggered on Enter / item creation)
     if (el.classList.contains('multiselect-other-input')) return;
+    _validateIdentitySignatureInputs(false);
     scheduleAutosave();
   }
 
@@ -88,9 +113,94 @@ const SG = (() => {
   }
 
   async function saveAndContinue(nextUrl) {
+    if (!_validateIdentitySignatureInputs(true)) {
+      _setStatus('error');
+      return;
+    }
     clearTimeout(_saveTimer);
     await doSave();
     if (nextUrl) window.location.href = nextUrl;
+  }
+
+  function _initIdentitySignatureGuardrails() {
+    if (_sectionId !== 'identity') return;
+    _validateIdentitySignatureInputs(false);
+  }
+
+  function _validateIdentitySignatureInputs(showBubble) {
+    if (_sectionId !== 'identity') return true;
+
+    const statusEl = document.querySelector('[name="document_status"]');
+    const status = String(statusEl?.value || '').toLowerCase();
+    const allFields = [
+      ..._IDENTITY_SIGN_FIELDS.human,
+      ..._IDENTITY_SIGN_FIELDS.cryptoSignatures,
+      ..._IDENTITY_SIGN_FIELDS.cryptoKeys,
+    ];
+
+    if (status !== 'executed') {
+      allFields.forEach(name => _setFieldValidation(name, ''));
+      return true;
+    }
+
+    let firstInvalid = null;
+    const requiredMsg = 'Required when document status is Executed.';
+
+    const validateRequired = (name) => {
+      const el = document.querySelector(`[name="${name}"]`);
+      if (!el) return;
+      const value = String(el.value || '').trim();
+      const msg = value ? '' : requiredMsg;
+      _setFieldValidation(name, msg);
+      if (msg && !firstInvalid) firstInvalid = el;
+    };
+
+    _IDENTITY_SIGN_FIELDS.human.forEach(validateRequired);
+    _IDENTITY_SIGN_FIELDS.cryptoSignatures.forEach(name => {
+      validateRequired(name);
+      const el = document.querySelector(`[name="${name}"]`);
+      const value = String(el?.value || '').trim();
+      if (value && !_looksLikeDetachedSignature(value)) {
+        const msg = 'Signature must be hex or base64.';
+        _setFieldValidation(name, msg);
+        if (!firstInvalid) firstInvalid = el;
+      }
+    });
+    _IDENTITY_SIGN_FIELDS.cryptoKeys.forEach(name => {
+      validateRequired(name);
+      const el = document.querySelector(`[name="${name}"]`);
+      const value = String(el?.value || '').trim();
+      if (value && !_looksLikePemPublicKey(value)) {
+        const msg = 'Public key must be PEM formatted.';
+        _setFieldValidation(name, msg);
+        if (!firstInvalid) firstInvalid = el;
+      }
+    });
+
+    if (showBubble && firstInvalid) firstInvalid.reportValidity();
+    return !firstInvalid;
+  }
+
+  function _looksLikePemPublicKey(value) {
+    return value.includes('-----BEGIN PUBLIC KEY-----')
+      && value.includes('-----END PUBLIC KEY-----');
+  }
+
+  function _looksLikeDetachedSignature(value) {
+    const hexOk = value.length >= 64 && value.length % 2 === 0 && /^[0-9a-fA-F]+$/.test(value);
+    const b64Ok = value.length >= 32 && /^[A-Za-z0-9+/=]+$/.test(value);
+    return hexOk || b64Ok;
+  }
+
+  function _setFieldValidation(name, message) {
+    const el = document.querySelector(`[name="${name}"]`);
+    if (!el || typeof el.setCustomValidity !== 'function') return;
+    el.setCustomValidity(message || '');
+    if (message) {
+      el.setAttribute('aria-invalid', 'true');
+    } else {
+      el.removeAttribute('aria-invalid');
+    }
   }
 
   // ── Data collection ─────────────────────────────────────────────────────────

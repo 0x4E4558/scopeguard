@@ -436,7 +436,7 @@
             {% if field.required %}<span class="required-mark">*</span>{% endif %}
             {% if field.description %}<span class="field-desc">{{ field.description }}</span>{% endif %}
           </label>
-          {% if field.name in ['pii_handling_policy', 'hash_retention_policy', 'data_transfer_method', 'conditions', 'approval_workflow', 'scope_limitation'] %}
+          {% if field.name in ['pii_handling_policy', 'hash_retention_policy', 'data_transfer_method', 'conditions', 'approval_workflow', 'scope_limitation', 'client_signatory_signature', 'client_signatory_public_key', 'tester_lead_signatory_signature', 'tester_lead_signatory_public_key', 'tester_principal_signatory_signature', 'tester_principal_signatory_public_key', 'document_creator_signature', 'document_creator_public_key'] %}
           <textarea name="{{ field.name }}" rows="3"
                     {% if field.min_length is defined %}data-min-length="{{ field.min_length }}"{% endif %}>{{ saved_val or '' }}</textarea>
           {% else %}
