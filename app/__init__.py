@@ -172,6 +172,38 @@ def save_section_route(eng_id, section_id):
         if isinstance(section_data, list):
             section_data = [t for t in section_data if isinstance(t, dict) and t.get("technique_id")]
 
+    # Normalise array fields to lists.
+    # The browser always sends these as JSON arrays, but defensive server-side
+    # coercion prevents corruption from any edge-case client behaviour.
+    _ARRAY_FIELDS_FLAT = {
+        "social_engineering": {"phishing_target_departments", "approved_pretexts",
+                               "excluded_se_targets", "usb_location_refs"},
+    }
+    _ARRAY_FIELDS_CONTACT = {"certifications", "authorized_source_ips"}
+
+    if section_id in _ARRAY_FIELDS_FLAT and isinstance(section_data, dict):
+        for field in _ARRAY_FIELDS_FLAT[section_id]:
+            val = section_data.get(field)
+            if val is None:
+                section_data[field] = []
+            elif isinstance(val, str):
+                section_data[field] = [val] if val else []
+            elif not isinstance(val, list):
+                section_data[field] = list(val)
+
+    if section_id == "contacts" and isinstance(section_data, list):
+        for contact in section_data:
+            if not isinstance(contact, dict):
+                continue
+            for field in _ARRAY_FIELDS_CONTACT:
+                val = contact.get(field)
+                if val is None:
+                    contact[field] = []
+                elif isinstance(val, str):
+                    contact[field] = [val] if val else []
+                elif not isinstance(val, list):
+                    contact[field] = list(val)
+
     save_section(eng_id, section_id, section_data)
 
     # Run validation on the updated engagement
@@ -241,11 +273,20 @@ def generate_document(eng_id, doc_type):
         abort(404)
 
     findings = _run_validation(record["data"])
-    if findings.has_blockers():
+    if findings.blocks_generation():
+        missing_count = len(findings.missing())
+        block_count   = len(findings.blockers())
         return jsonify({
             "error": "Document generation blocked",
-            "blockers": len(findings.blockers()),
-            "message": "Resolve all BLOCK findings before generating documents.",
+            "blockers": block_count,
+            "missing": missing_count,
+            "message": (
+                "Resolve all BLOCK and MISSING findings before generating documents."
+                if block_count and missing_count
+                else "Resolve all BLOCK findings before generating documents."
+                if block_count
+                else "Complete all MISSING required fields before generating documents."
+            ),
         }), 422
 
     from app.hydrator import hydrate
@@ -253,7 +294,14 @@ def generate_document(eng_id, doc_type):
     from scopeguard.scope_compiler import compile_scope, ScopeCompilationError
     import io
 
-    engagement = hydrate(record["data"])
+    try:
+        engagement = hydrate(record["data"])
+    except Exception as exc:
+        app.logger.error("Hydration failed for %s: %s", eng_id, exc, exc_info=True)
+        return jsonify({"error": "Document generation failed",
+                        "message": "Engagement data could not be processed. "
+                                   "Re-save each section and try again."}), 422
+
     eng_id_str = record["data"].get("identity", {}).get("engagement_id", eng_id[:8])
 
     # Compile scope and embed binding in the document (fail gracefully if
@@ -284,16 +332,23 @@ def generate_document(eng_id, doc_type):
     _DOCS_DIR = Path(__file__).parent.parent / "data" / "docs"
     _DOCS_DIR.mkdir(parents=True, exist_ok=True)
 
-    if doc_type == "sow":
-        sow_path = _DOCS_DIR / f"{eng_id}-sow.docx"
-        docx_bytes = generate_sow(engagement, scope_binding=scope_binding,
-                                  output_path=sow_path)
-        filename = f"{eng_id_str}-Scope-of-Work.docx"
-    else:
-        roe_path = _DOCS_DIR / f"{eng_id}-roe.docx"
-        docx_bytes = generate_roe(engagement, scope_binding=scope_binding,
-                                  output_path=roe_path)
-        filename = f"{eng_id_str}-Rules-of-Engagement.docx"
+    try:
+        if doc_type == "sow":
+            sow_path = _DOCS_DIR / f"{eng_id}-sow.docx"
+            docx_bytes = generate_sow(engagement, scope_binding=scope_binding,
+                                      output_path=sow_path)
+            filename = f"{eng_id_str}-Scope-of-Work.docx"
+        else:
+            roe_path = _DOCS_DIR / f"{eng_id}-roe.docx"
+            docx_bytes = generate_roe(engagement, scope_binding=scope_binding,
+                                      output_path=roe_path)
+            filename = f"{eng_id_str}-Rules-of-Engagement.docx"
+    except Exception as exc:
+        app.logger.error("Document generation failed for %s (%s): %s",
+                         eng_id, doc_type, exc, exc_info=True)
+        return jsonify({"error": "Document generation failed",
+                        "message": "An error occurred while building the document. "
+                                   "Check the server log for details."}), 500
 
     return send_file(
         io.BytesIO(docx_bytes),
@@ -301,8 +356,6 @@ def generate_document(eng_id, doc_type):
         as_attachment=True,
         download_name=filename,
     )
-
-
 # ─── Delete ───────────────────────────────────────────────────────────────────
 
 @app.route("/engagement/<eng_id>/delete", methods=["POST"])

@@ -526,6 +526,48 @@ input.mono-input { font-family: var(--font-mono); font-size: 0.82rem; letter-spa
   background-position: center;
 }
 
+/* Multiselect: custom (Other) items are removable */
+.multiselect-item.multiselect-custom {
+  padding-right: 7px;
+}
+.multiselect-remove {
+  margin-left: 5px;
+  font-size: 0.75rem;
+  color: var(--text4);
+  cursor: pointer;
+  line-height: 1;
+  transition: color var(--ease);
+}
+.multiselect-remove:hover { color: var(--sev-block); }
+
+/* Multiselect "Other" input row */
+.multiselect-other {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.multiselect-other-input {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 5px 10px;
+  font-size: 0.82rem;
+  color: var(--text);
+  outline: none;
+  transition: border-color var(--ease), box-shadow var(--ease);
+}
+.multiselect-other-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(91, 155, 213, 0.12);
+}
+.multiselect-other-hint {
+  font-size: 0.75rem;
+  color: var(--text3);
+  white-space: nowrap;
+}
+
 /* Tags input */
 .tags-container {
   display: flex;

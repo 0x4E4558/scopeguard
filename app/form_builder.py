@@ -73,10 +73,16 @@ def _field_spec(name: str, meta: dict[str, Any]) -> dict[str, Any]:
         spec["options"] = meta.get("values", [])
         spec["type"] = "multiselect"
 
-    # Array-of-enum gets options too
+    # Array-of-enum gets options too; allow_other enables a free-text "Other" input
     if ftype == "array" and meta.get("item_type") == "enum":
         spec["options"] = meta.get("values", [])
         spec["type"] = "multiselect"
+        if meta.get("allow_other"):
+            spec["allow_other"] = True
+
+    # Direct multiselect may also carry allow_other
+    if ftype == "multiselect" and meta.get("allow_other"):
+        spec["allow_other"] = True
 
     # Boolean → checkbox
     if ftype == "boolean":

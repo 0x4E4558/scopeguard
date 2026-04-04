@@ -26,13 +26,25 @@ fields:
 
   phishing_target_departments:
     type: array
-    item_type: string
+    item_type: enum
     required: true
     conditional_on:
       field: phishing_authorized
       value: true
     min_items: 1
-    description: "Explicit department list. 'All staff' is not an acceptable value."
+    allow_other: true
+    values:
+      - All Staff
+      - Executive / C-Suite
+      - Finance / Accounting
+      - Human Resources
+      - Information Technology
+      - Legal / Compliance
+      - Operations
+      - Sales & Marketing
+      - Customer Support
+      - Engineering / R&D
+    description: "Select all departments in scope. Use Other to add unlisted departments."
 
   phishing_target_max_count:
     type: integer
@@ -90,14 +102,25 @@ fields:
 
   approved_pretexts:
     type: array
-    item_type: string
+    item_type: enum
     required: true
     conditional_on:
       field: impersonation_authorized
       value: true
     min_items: 1
-    validation: not_vague
-    description: "Explicit approved pretext list. Minimum 1 if authorized."
+    allow_other: true
+    values:
+      - IT Support Technician
+      - HVAC / Facilities Contractor
+      - Vendor / Supplier Representative
+      - Delivery Personnel
+      - New Employee
+      - Third-Party Auditor
+      - Building Management / Facilities
+      - Fire Safety Inspector
+      - Telecom / Network Technician
+      - Security Auditor
+    description: "Select all approved pretexts. Use Other to add unlisted scenarios."
 
   excluded_se_targets:
     type: array

@@ -38,14 +38,17 @@ contact_record_fields:
   phone_mobile:
     type: string
     required: false
-    description: "Mobile / personal phone. Required for emergency halt authority and engagement lead."
+    conditional_required_for_roles:
+      - emergency_halt_authority
+      - engagement_lead
     validation: phone_format
+    description: "Mobile / personal phone. Required for emergency halt authority and engagement lead."
 
   email:
     type: string
     required: true
-    description: "Validated against RFC 5322 pattern."
     validation: rfc5322_email
+    description: "Validated against RFC 5322 pattern."
 
   preferred_contact_method:
     type: enum
@@ -84,34 +87,6 @@ contact_record_fields:
       - full_engagement_counsel
       - incident_response_counsel
     description: "Scope of counsel's authority in this engagement."
-
-  certifications:
-    type: array
-    item_type: string
-    required: false
-    description: "For tester contacts only. E.g. OSCP, CISSP, CEH."
-
-  authorized_source_ips:
-    type: array
-    item_type: cidr_or_ip
-    required: false
-    description: "Source IPs for network testing. Required for testers conducting network tests. Enter one IP or CIDR per entry." 
-    validation: phone_format
-    description: "Must include country code or area code."
-
-  phone_mobile:
-    type: string
-    required: false
-    conditional_required_for_roles:
-      - emergency_halt_authority
-      - engagement_lead
-    validation: phone_format
-
-  email:
-    type: string
-    required: true
-    validation: rfc5322_email
-    description: "Validated against RFC 5322 pattern."
 
   certifications:
     type: array

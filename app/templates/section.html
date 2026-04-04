@@ -298,7 +298,24 @@
               {{ opt | replace('_',' ') | title }}
             </div>
             {% endfor %}
+            {# Render any custom (non-predefined) saved values as removable selected items #}
+            {% if field.allow_other and saved_val %}
+              {% for v in saved_val %}
+                {% if v not in field.options %}
+                <div class="multiselect-item selected multiselect-custom" data-value="{{ v }}">{{ v }}<span class="multiselect-remove" title="Remove">×</span></div>
+                {% endif %}
+              {% endfor %}
+            {% endif %}
           </div>
+          {% if field.allow_other %}
+          <div class="multiselect-other">
+            <input type="text" class="multiselect-other-input"
+                   data-for-group="{{ field.name }}"
+                   placeholder="Other — type and press Enter to add…"
+                   autocomplete="off">
+            <span class="multiselect-other-hint">press Enter to add</span>
+          </div>
+          {% endif %}
 
           {% elif field.type == 'buttongroup' %}
           <label>
@@ -717,7 +734,24 @@
             <div class="multiselect-item {% if saved_val and opt in saved_val %}selected{% endif %}"
                  data-value="{{ opt }}">{{ opt | replace('_',' ') | title }}</div>
             {% endfor %}
+            {# Render any custom (non-predefined) saved values as removable selected items #}
+            {% if field.allow_other and saved_val %}
+              {% for v in saved_val %}
+                {% if v not in field.options %}
+                <div class="multiselect-item selected multiselect-custom" data-value="{{ v }}">{{ v }}<span class="multiselect-remove" title="Remove">×</span></div>
+                {% endif %}
+              {% endfor %}
+            {% endif %}
           </div>
+          {% if field.allow_other %}
+          <div class="multiselect-other">
+            <input type="text" class="multiselect-other-input"
+                   data-for-group="{{ field.name }}"
+                   placeholder="Other — type and press Enter to add…"
+                   autocomplete="off">
+            <span class="multiselect-other-hint">press Enter to add</span>
+          </div>
+          {% endif %}
           {% elif field.type == 'array' %}
           <div class="tags-container" data-tag-field="{{ field.name }}">
             {% if saved_val %}{% for v in saved_val %}
