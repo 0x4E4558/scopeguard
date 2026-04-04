@@ -160,6 +160,22 @@
           ← Back to Form
         </a>
 
+        <!-- Print Draft buttons — always available at every engagement state -->
+        <a href="/engagement/{{ eng_id }}/generate/draft/sow" class="btn btn-ghost btn-icon">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M2 2h7l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" fill="none"/>
+            <path d="M9 2v3h3M4 7h6M4 9.5h6M4 5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          Print Draft SOW
+        </a>
+        <a href="/engagement/{{ eng_id }}/generate/draft/roe" class="btn btn-ghost btn-icon">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M2 2h7l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" fill="none"/>
+            <path d="M9 2v3h3M4 7h6M4 9.5h4M4 5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          Print Draft ROE
+        </a>
+
         {% if findings.blocks_generation() %}
         <span class="preflight-block-msg">
           {% set b = findings.count().BLOCK %}{% set m = findings.count().MISSING %}
@@ -189,17 +205,19 @@
         {% endif %}
       </div>
 
-      {% if not findings.blocks_generation() %}
       <div class="preflight-info-box">
-        Documents are generated from your validated engagement data.
-        Both files are fully formatted Word documents (.docx) ready for review and signature.
+        <strong>Print Draft</strong> generates a watermarked draft for client review and approval.
+        No execution token is embedded. Upon client approval, signatures are collected to enable execution.
+        {% if not findings.blocks_generation() %}
+        <br>
+        <strong>Download</strong> generates the fully executed document (requires all signatures).
         {% if findings.count().CLARIFY > 0 %}
         <strong class="preflight-warn-clarify">
           {{ findings.count().CLARIFY }} CLARIFY finding(s) remain — review before sending for signature.
         </strong>
         {% endif %}
+        {% endif %}
       </div>
-      {% endif %}
 
     </div>
 
