@@ -1,5 +1,5 @@
 """
-scopeguard.finding
+nex.finding
 ~~~~~~~~~~~~~~~~~~
 Finding records produced by the validation engine.
 Severity levels mirror the spec exactly:

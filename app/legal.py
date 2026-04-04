@@ -1,7 +1,7 @@
 """
 app.legal
 ~~~~~~~~~
-Legal protective clauses for ScopeGuard-generated documents.
+Legal protective clauses for Nex-generated documents.
 
 These clauses are designed to:
 1. Establish the signed agreement as a complete authorization defense under

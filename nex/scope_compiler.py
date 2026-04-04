@@ -1,5 +1,5 @@
 """
-scopeguard.scope_compiler
+nex.scope_compiler
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 Phases 4-8, 10 — deterministic scope authority compilation.
 
@@ -382,7 +382,7 @@ def compile_scope(
         "scope_id":     scope_id,
         "validation_results": {
             "note": "Validation findings must be retrieved from the FindingList "
-                    "produced by scopeguard.validator.Validator.validate() and "
+                    "produced by nex.validator.Validator.validate() and "
                     "attached to the audit record by the caller."
         },
     }

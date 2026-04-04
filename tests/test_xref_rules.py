@@ -16,13 +16,13 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scopeguard.validator import Validator
-from scopeguard.models import (
+from nex.validator import Validator
+from nex.models import (
     Contact, NetworkAsset, OutOfScopeAsset, PhysicalLocation,
     Technique, MaintenanceWindow, DeliveryMethod, AuthorizationStatus,
     TechniqueCategory,
 )
-from scopeguard.finding import Severity
+from nex.finding import Severity
 from tests.conftest import load_fixture
 
 
@@ -242,7 +242,7 @@ class TestXRF008:
         assert not has_rule(findings, "XRF-008")
 
     def test_blackout_before_start_detected(self, mcb_engagement):
-        from scopeguard.models import BlackoutDate
+        from nex.models import BlackoutDate
         eng = copy.deepcopy(mcb_engagement)
         eng.period.blackout_dates.append(
             BlackoutDate(date=date(2026, 3, 15), reason="Before engagement start")
@@ -251,7 +251,7 @@ class TestXRF008:
         assert has_rule(findings, "XRF-008")
 
     def test_blackout_after_end_detected(self, mcb_engagement):
-        from scopeguard.models import BlackoutDate
+        from nex.models import BlackoutDate
         eng = copy.deepcopy(mcb_engagement)
         eng.period.blackout_dates.append(
             BlackoutDate(date=date(2026, 5, 1), reason="After engagement end")
@@ -435,14 +435,14 @@ class TestXRF015:
         assert findings_for(findings, "XRF-015")[0].severity == Severity.NOTE
 
     def test_hipaa_listed_no_trigger(self, mcb_engagement):
-        from scopeguard.models import RegulatoryBasis
+        from nex.models import RegulatoryBasis
         eng = copy.deepcopy(mcb_engagement)
         eng.identity.regulatory_basis.append(RegulatoryBasis.HIPAA)
         findings = validate(eng)
         assert not has_rule(findings, "XRF-015")
 
     def test_non_full_scope_no_trigger(self, mcb_engagement):
-        from scopeguard.models import EngagementType
+        from nex.models import EngagementType
         eng = copy.deepcopy(mcb_engagement)
         eng.identity.engagement_type = EngagementType.EXTERNAL_ONLY
         findings = validate(eng)
@@ -461,7 +461,7 @@ class TestXRF016:
         assert not has_rule(findings, "XRF-016")
 
     def test_pci_without_cde_assets_noted(self, mcb_engagement):
-        from scopeguard.models import RegulatoryBasis
+        from nex.models import RegulatoryBasis
         eng = copy.deepcopy(mcb_engagement)
         # Remove CDE-related assets
         eng.out_of_scope_assets = [

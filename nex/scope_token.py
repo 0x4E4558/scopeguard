@@ -1,5 +1,5 @@
 """
-scopeguard.scope_token
+nex.scope_token
 ~~~~~~~~~~~~~~~~~~~~~~
 HMAC-SHA256 scope token generation.
 

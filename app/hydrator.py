@@ -14,7 +14,7 @@ from pathlib import Path
 from datetime import date, datetime
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from scopeguard.models import (
+from nex.models import (
     Engagement, EngagementIdentity, EngagementPeriod, Contact, BlackoutDate,
     NetworkAsset, OutOfScopeAsset, PhysicalLocation, Technique, MaintenanceWindow,
     DataGovernance, SocialEngineering,

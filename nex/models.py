@@ -1,5 +1,5 @@
 """
-scopeguard.models
+nex.models
 ~~~~~~~~~~~~~~~~~
 Python dataclasses for all 8 schema groups.
 These are the structured data objects that flow through the validation engine.

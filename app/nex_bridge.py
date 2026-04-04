@@ -1,14 +1,14 @@
 """
 nex_bridge
 ~~~~~~~~~~
-Post-generation bridge: compiles a validated ScopeGuard Engagement into the
+Post-generation bridge: compiles a validated Nex Engagement into the
 Nex policy bundle that BootPolicy.initialise() reads at session startup.
 
-Workflow (called by scopeguard/app/generator.py after .docx files land on disk):
+Workflow (called by nex/app/generator.py after .docx files land on disk):
 
     1. hash_document(sow_path), hash_document(roe_path)  →  sow_hash, roe_hash
     2. build_roe_constraints(engagement, sow_hash)        →  ROEConstraints
-    3. write_policy_bundle(...)                           →  /etc/scopeguard-policy.json
+    3. write_policy_bundle(...)                           →  /etc/nex-policy.json
 
 After BootPolicy.initialise() returns a BootSession, the caller must invoke:
 
@@ -30,7 +30,7 @@ Design notes
   so that SessionRecoveryManager has a RecoveryRecord on disk before any
   module runs.  If the process is interrupted between bootstrap and commit, the
   engagement must be restarted from the policy bundle — which remains on disk.
-* Standard library only.  All Nex imports are guarded so that ScopeGuard's
+* Standard library only.  All Nex imports are guarded so that Nex's
   test suite can import this module without a full Nex installation.
 """
 
@@ -77,7 +77,7 @@ except ImportError:
 # TYPE_CHECKING-only imports so type checkers can resolve the annotations
 # without requiring the packages at runtime.
 if TYPE_CHECKING:
-    from scopeguard.models import Engagement, Technique, AuthorizationStatus
+    from nex.models import Engagement, Technique, AuthorizationStatus
     from core.boot_policy import BootSession
     from core.operator_identity import OperatorKeyring
 
@@ -88,7 +88,7 @@ if TYPE_CHECKING:
 CHUNK_SIZE       = 65536          # file-hashing block size in bytes
 POLICY_VERSION   = "1.0"
 DEFAULT_POLICY_PATH = Path(
-    os.environ.get("NEX_POLICY_PATH", "/etc/scopeguard-policy.json")
+    os.environ.get("NEX_POLICY_PATH", "/etc/nex-policy.json")
 )
 DEFAULT_RECOVERY_DIR = Path(
     os.environ.get("NEX_RECOVERY_DIR", "/var/lib/nex/recovery")
@@ -99,7 +99,7 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Technique-ID prefix → TechniqueClass mapping
 #
-# Source of truth: scopeguard/schema/techniques.yaml (technique_id prefixes)
+# Source of truth: nex/schema/techniques.yaml (technique_id prefixes)
 # mapped to nex/core/policy_engine.py TechniqueClass enum values.
 # PE-* ids are resolved individually because the category is split across
 # multiple TechniqueClass values.
@@ -196,7 +196,7 @@ def hash_document(path: str | Path) -> str:
 
 
 def map_techniques(techniques: List[Any]) -> List[Any]:
-    """Map authorised ScopeGuard Technique objects to TechniqueClass values.
+    """Map authorised Nex Technique objects to TechniqueClass values.
 
     Filters to techniques where:
         authorization_status == AuthorizationStatus.AUTHORIZED
@@ -295,7 +295,7 @@ def _derive_operator_id(engagement: Any) -> str:
 
 
 def build_roe_constraints(engagement: Any, sow_hash: str) -> Any:
-    """Build a Nex ROEConstraints from a validated ScopeGuard Engagement.
+    """Build a Nex ROEConstraints from a validated Nex Engagement.
 
     This is the native Nex ROEConstraints dataclass from core/policy_engine.py,
     not a local reimplementation.  BootPolicy._build_roe_constraints() reads
@@ -305,7 +305,7 @@ def build_roe_constraints(engagement: Any, sow_hash: str) -> Any:
     to SessionRecoveryManager.commit_pre_launch().
 
     Args:
-        engagement: Hydrated Engagement object from scopeguard/app/hydrator.py.
+        engagement: Hydrated Engagement object from nex/app/hydrator.py.
         sow_hash:   SHA-256 hex digest of the SOW .docx file, produced by
                     hash_document().
 
@@ -354,10 +354,10 @@ def write_policy_bundle(
 ) -> dict:
     """Hash the SOW/ROE documents and write the Nex policy bundle.
 
-    This is the primary entry point called by scopeguard/app/generator.py
+    This is the primary entry point called by nex/app/generator.py
     after both .docx files have been written to disk.
 
-    The bundle is written to /etc/scopeguard-policy.json (or the path
+    The bundle is written to /etc/nex-policy.json (or the path
     specified by the NEX_POLICY_PATH environment variable, or the *path*
     argument).  BootPolicy.initialise() reads this file via
     _load_policy_bundle() and constructs ROEConstraints, ScopeTokenManager,
@@ -365,7 +365,7 @@ def write_policy_bundle(
 
     Policy bundle fields consumed by boot_policy._build_roe_constraints():
         runtime_mode              — RuntimeMode value string.
-        expected_environment_hash — SHA-256 of /etc/scopeguard-manifest;
+        expected_environment_hash — SHA-256 of /etc/nex-manifest;
                                     pass "" to skip manifest verification.
         tactical_window_start     — Unix epoch int (engagement start).
         tactical_window_end       — Unix epoch int (engagement end).
@@ -383,7 +383,7 @@ def write_policy_bundle(
                                   DEFAULT_POLICY_PATH.
         runtime_mode:             RuntimeMode string for boot_policy.
                                   Defaults to "OFFENSIVE_MODE".
-        expected_environment_hash: SHA-256 hex of /etc/scopeguard-manifest.
+        expected_environment_hash: SHA-256 hex of /etc/nex-manifest.
                                   Pass "" (default) to skip manifest check.
 
     Returns:

@@ -18,14 +18,14 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scopeguard.validator import Validator
-from scopeguard.models import (
+from nex.validator import Validator
+from nex.models import (
     NetworkAsset, OutOfScopeAsset, DeliveryMethod,
     DocumentStatus, AuthorizationStatus, TechniqueCategory,
     Technique, DataGovernance, CredentialUsePolicy, EncryptionStandard,
     SocialEngineering, UsbPayloadType,
 )
-from scopeguard.finding import Severity
+from nex.finding import Severity
 from tests.conftest import load_fixture
 
 

@@ -19,14 +19,14 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scopeguard.validator import Validator
-from scopeguard.models import (
+from nex.validator import Validator
+from nex.models import (
     Engagement, EngagementIdentity, EngagementType, Classification,
     DocumentStatus, AuthorizationStatus, TechniqueCategory,
     Technique, NetworkAsset, OutOfScopeAsset, PhysicalLocation,
     DeliveryMethod, SocialEngineering,
 )
-from scopeguard.finding import Severity
+from nex.finding import Severity
 from tests.conftest import load_fixture
 
 
@@ -217,7 +217,7 @@ class TestPhysicalLocationActivities:
                 assert isinstance(act, str)
 
     def test_location_without_activities_triggers_val020(self, mcb_engagement):
-        from scopeguard.validator import Validator
+        from nex.validator import Validator
         eng = copy.deepcopy(mcb_engagement)
         # Clear the maintenance window activities (reuses VAL-020 check)
         if eng.maintenance_windows:
@@ -568,7 +568,7 @@ class TestExportImportDuplicate(TestRouteRendering):
         assert r.status_code == 200
         assert r.content_type == "application/json"
         payload = json.loads(r.data)
-        assert payload.get("scopeguard_export") is True
+        assert payload.get("nex_export") is True
         assert "data" in payload
 
     def test_export_contains_identity(self):
