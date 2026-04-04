@@ -24,7 +24,7 @@ from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 import docx.opc.constants
 
-from nex.models import (
+from scopeguard.models import (
     Engagement, AuthorizationStatus,
 )
 from app.legal import get_sow_legal_clauses, get_roe_legal_clauses
@@ -407,7 +407,7 @@ def generate_sow(eng: Engagement, scope_binding: dict | None = None,
 
     Args:
         eng:           Validated Engagement object.
-        scope_binding: Optional dict from :func:`nex.scope_compiler.compile_scope`
+        scope_binding: Optional dict from :func:`scopeguard.scope_compiler.compile_scope`
                        with keys ``scope_id``, ``scope_hash``, and ``operator_id``.
                        When provided, these values are embedded in the document
                        header table and in Section 1.2 (Engagement Identification)
@@ -496,7 +496,7 @@ def generate_sow(eng: Engagement, scope_binding: dict | None = None,
         "applicable law.")
 
     _notice_box(doc,
-        "STANDARDS ALIGNMENT: This document was produced using Nex and aligns "
+        "STANDARDS ALIGNMENT: This document was produced using ScopeGuard and aligns "
         "with MITRE ATT&CK Enterprise v15, NIST SP 800-115, PTES, OWASP Testing Guide v4.2, "
         "CVSS v3.1, CVE/NVD, and CWE. Technique references in the accompanying Rules of "
         "Engagement use ATT&CK Tactic and Technique IDs. See ROE Appendix A.")
@@ -960,7 +960,7 @@ def generate_roe(eng: Engagement, scope_binding: dict | None = None,
 
     Args:
         eng:           Validated Engagement object.
-        scope_binding: Optional dict from :func:`nex.scope_compiler.compile_scope`
+        scope_binding: Optional dict from :func:`scopeguard.scope_compiler.compile_scope`
                        with keys ``scope_id``, ``scope_hash``, and ``operator_id``.
                        When provided, these values are embedded in the cover table
                        to cryptographically link the ROE to scope.json.

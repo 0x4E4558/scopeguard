@@ -1,8 +1,8 @@
 """
 app/__init__.py  (also serves as app.py entry point)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Nex Flask application.
-Run with: python app.py  (from the nex/ directory)
+ScopeGuard Flask application.
+Run with: python app.py  (from the scopeguard/ directory)
 """
 
 import os
@@ -24,15 +24,15 @@ from app.storage import (
 )
 from app.form_builder import get_all_sections, get_section_fields, SECTION_IDS
 from app.hydrator import hydrate
-from nex.validator import Validator
-from nex.finding import Severity
-from nex.models import DocumentStatus
+from scopeguard.validator import Validator
+from scopeguard.finding import Severity
+from scopeguard.models import DocumentStatus
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 # Secret key: prefer an environment variable so it stays stable across restarts.
 # Falls back to a random key (sessions won't survive restarts, which is fine for
 # a local single-user tool).
-app.secret_key = os.environ.get("NEX_SECRET_KEY") or secrets.token_hex(32)
+app.secret_key = os.environ.get("SCOPEGUARD_SECRET_KEY") or secrets.token_hex(32)
 
 
 def _json_serial(obj):
@@ -45,16 +45,16 @@ def _get_hmac_key() -> bytes:
     """Return the HMAC key for scope token signing.
 
     Resolution order:
-        1. NEX_HMAC_SECRET / NEX_SCOPE_SECRET / NEX_HMAC_KEY
+        1. SCOPEGUARD_HMAC_SECRET / NEX_SCOPE_SECRET / SCOPEGUARD_HMAC_KEY
             environment variable (hex-encoded).
       2. data/hmac.key file (hex-encoded, one line).
       3. Development fallback: a deterministic key derived from app.secret_key.
-         This is NOT suitable for production; set NEX_HMAC_KEY in prod.
+         This is NOT suitable for production; set SCOPEGUARD_HMAC_KEY in prod.
     """
     env_key = (
-        os.environ.get("NEX_HMAC_SECRET", "").strip()
+        os.environ.get("SCOPEGUARD_HMAC_SECRET", "").strip()
         or os.environ.get("NEX_SCOPE_SECRET", "").strip()
-        or os.environ.get("NEX_HMAC_KEY", "").strip()
+        or os.environ.get("SCOPEGUARD_HMAC_KEY", "").strip()
     )
     if env_key:
         return bytes.fromhex(env_key)
@@ -310,7 +310,7 @@ def generate_document(eng_id, doc_type):
 
     from app.hydrator import hydrate
     from app.generator import generate_sow, generate_roe
-    from nex.scope_compiler import compile_scope, ScopeCompilationError
+    from scopeguard.scope_compiler import compile_scope, ScopeCompilationError
     import io
 
     try:
@@ -449,20 +449,20 @@ def generate_scope_token_route(eng_id):
         }), 422
 
     env_key = (
-        os.environ.get("NEX_HMAC_SECRET", "").strip()
+        os.environ.get("SCOPEGUARD_HMAC_SECRET", "").strip()
         or os.environ.get("NEX_SCOPE_SECRET", "").strip()
-        or os.environ.get("NEX_HMAC_KEY", "").strip()
+        or os.environ.get("SCOPEGUARD_HMAC_KEY", "").strip()
     )
     if not env_key:
         return jsonify({
             "error": "Token generation blocked",
             "message": (
-                "Set NEX_HMAC_SECRET (or NEX_SCOPE_SECRET) before "
+                "Set SCOPEGUARD_HMAC_SECRET (or NEX_SCOPE_SECRET) before "
                 "requesting a scope token."
             ),
         }), 422
 
-    from nex.token_generator import generate_token_json
+    from scopeguard.token_generator import generate_token_json
 
     try:
         engagement = hydrate(record["data"])
@@ -515,8 +515,8 @@ def scope_artifact(eng_id):
         }), 422
 
     from app.hydrator import hydrate
-    from nex.scope_compiler import compile_scope, ScopeCompilationError
-    from nex.canonicalize import canonical_json
+    from scopeguard.scope_compiler import compile_scope, ScopeCompilationError
+    from scopeguard.canonicalize import canonical_json
     import io as _io
 
     try:
@@ -550,7 +550,7 @@ def nex_export(eng_id):
     """Write the full scope artifact set to the Nex artifact directory layout.
 
     Writes to the configured Nex artifacts directory (default:
-    /var/lib/nex/artifacts, overridable via NEX_ARTIFACTS_DIR env
+    /var/lib/nex/artifacts, overridable via SCOPEGUARD_NEX_ARTIFACTS_DIR env
     var).  Returns a JSON manifest describing what was written.
     """
     record = load_engagement(eng_id)
@@ -567,7 +567,7 @@ def nex_export(eng_id):
 
     from app.hydrator import hydrate
     from app.nex_export import export_to_nex
-    from nex.scope_compiler import compile_scope, ScopeCompilationError
+    from scopeguard.scope_compiler import compile_scope, ScopeCompilationError
 
     try:
         engagement = hydrate(record["data"])
@@ -612,7 +612,7 @@ def export_engagement(eng_id):
     filename = f"{eng_id_str}-engagement.json"
 
     export_data = {
-        "nex_export": True,
+        "scopeguard_export": True,
         "exported_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         "engagement_row_id": eng_id,
         "data": record["data"],
@@ -772,7 +772,7 @@ def _run_validation(data: dict):
         import traceback
         app.logger.warning(f"Validation error: {e}")
         app.logger.debug(traceback.format_exc())
-        from nex.finding import FindingList, Finding, Severity
+        from scopeguard.finding import FindingList, Finding, Severity
         fl = FindingList()
         fl.add(Finding(
             rule_id="SYS-001",

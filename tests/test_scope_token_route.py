@@ -21,9 +21,9 @@ def app_client(tmp_path, monkeypatch):
     # Use isolated DB for route tests.
     from app import storage
 
-    monkeypatch.setattr(storage, "DB_PATH", tmp_path / "nex-test.db")
+    monkeypatch.setattr(storage, "DB_PATH", tmp_path / "scopeguard-test.db")
     monkeypatch.setenv(
-        "NEX_HMAC_SECRET",
+        "SCOPEGUARD_HMAC_SECRET",
         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     )
     monkeypatch.setenv("NEX_COMPLIANCE_STRICT", "0")
@@ -151,8 +151,8 @@ def test_document_routes_require_signed_documents(app_client):
 def test_scope_token_route_rejects_without_secret(tmp_path, monkeypatch):
     from app import storage
 
-    monkeypatch.setattr(storage, "DB_PATH", tmp_path / "nex-test-no-secret.db")
-    monkeypatch.delenv("NEX_HMAC_SECRET", raising=False)
+    monkeypatch.setattr(storage, "DB_PATH", tmp_path / "scopeguard-test-no-secret.db")
+    monkeypatch.delenv("SCOPEGUARD_HMAC_SECRET", raising=False)
     monkeypatch.delenv("NEX_SCOPE_SECRET", raising=False)
 
     from app import create_app
@@ -167,4 +167,4 @@ def test_scope_token_route_rejects_without_secret(tmp_path, monkeypatch):
     assert resp.status_code == 422
     body = resp.get_json()
     assert body["error"] == "Token generation blocked"
-    assert "NEX_HMAC_SECRET" in body["message"]
+    assert "SCOPEGUARD_HMAC_SECRET" in body["message"]

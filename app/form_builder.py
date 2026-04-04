@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from nex.schema_loader import SchemaLoader
+from scopeguard.schema_loader import SchemaLoader
 
 SCHEMA_DIR = Path(__file__).parent.parent / "schema"
 

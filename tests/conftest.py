@@ -27,7 +27,7 @@ except ImportError:
         fixture = _FakeFixture()
     pytest = _FakePytest()  # type: ignore
 
-from nex.models import (
+from scopeguard.models import (
     Engagement, EngagementIdentity, EngagementPeriod, Contact, BlackoutDate,
     NetworkAsset, OutOfScopeAsset, PhysicalLocation, Technique, MaintenanceWindow,
     DataGovernance, SocialEngineering,

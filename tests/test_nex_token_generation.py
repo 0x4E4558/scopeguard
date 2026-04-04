@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta
 
 import pytest
 
-from nex.models import (
+from scopeguard.models import (
     AuthorizationStatus,
     Classification,
     Contact,
@@ -24,7 +24,7 @@ from nex.models import (
     Technique,
     TechniqueCategory,
 )
-from nex.token_generator import (
+from scopeguard.token_generator import (
     ALGORITHM_LITERAL,
     ScopeTokenGenerator,
     generate_token_json,
@@ -210,7 +210,7 @@ def test_validate_with_reason_bad_signature(minimal_engagement, test_hmac_key):
         nex_module_ids=token["payload"]["nex_modules"][:1],
     )
     assert ok is False
-    assert reason == "nex_bad_signature"
+    assert reason == "scopeguard_bad_signature"
 
 
 def test_validate_with_reason_module_not_allowed(minimal_engagement, test_hmac_key):
@@ -228,7 +228,7 @@ def test_validate_with_reason_module_not_allowed(minimal_engagement, test_hmac_k
         nex_module_ids=["nex.invalid.module@1.0"],
     )
     assert ok is False
-    assert reason == "nex_module_not_allowed"
+    assert reason == "scopeguard_module_not_allowed"
 
 
 def test_validate_with_reason_operator_mismatch(minimal_engagement, test_hmac_key):
@@ -246,7 +246,7 @@ def test_validate_with_reason_operator_mismatch(minimal_engagement, test_hmac_ke
         nex_module_ids=token["payload"]["nex_modules"][:1],
     )
     assert ok is False
-    assert reason == "nex_operator_mismatch"
+    assert reason == "scopeguard_operator_mismatch"
 
 
 def test_validate_with_reason_bad_expires_at(minimal_engagement, test_hmac_key):
@@ -268,16 +268,16 @@ def test_validate_with_reason_bad_expires_at(minimal_engagement, test_hmac_key):
         nex_module_ids=token["payload"]["nex_modules"][:1],
     )
     assert ok is False
-    assert reason == "nex_bad_expires_at"
+    assert reason == "scopeguard_bad_expires_at"
 
 
 def test_rejects_unknown_nex_module_ids_from_mapping(minimal_engagement, test_hmac_key, monkeypatch):
     monkeypatch.setattr(
-        "nex.token_generator.nex_allowlist_by_technique_class",
+        "scopeguard.token_generator.scopeguard_allowlist_by_technique_class",
         lambda: {"RECON": ["nex.unknown.capability@1.0"], "ENUMERATION": []},
     )
     monkeypatch.setattr(
-        "nex.token_generator.known_nex_module_ids",
+        "scopeguard.token_generator.known_scopeguard_module_ids",
         lambda: {"nex.recon.dns_enum@1.0"},
     )
 
@@ -292,7 +292,7 @@ def test_rejects_unknown_nex_module_ids_from_mapping(minimal_engagement, test_hm
 def test_strict_d3fend_blocks_empty_mapping(minimal_engagement, test_hmac_key, monkeypatch):
     monkeypatch.setenv("NEX_COMPLIANCE_STRICT", "1")
     monkeypatch.setattr(
-        "nex.token_generator.capability_to_d3fend_ids",
+        "scopeguard.token_generator.capability_to_d3fend_ids",
         lambda: {},
     )
 

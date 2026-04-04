@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ sections | selectattr('id', 'eq', section_id) | map(attribute='label') | first }} — Nex{% endblock %}
+{% block title %}{{ sections | selectattr('id', 'eq', section_id) | map(attribute='label') | first }} — ScopeGuard{% endblock %}
 
 {% block body %}
 {% set current_section = sections | selectattr('id', 'eq', section_id) | first %}

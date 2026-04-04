@@ -1,5 +1,5 @@
 """
-nex.validator
+scopeguard.validator
 ~~~~~~~~~~~~~~~~~~~~
 Validation engine — Layer 2.
 Operates on a complete Engagement data object produced by Layer 1.

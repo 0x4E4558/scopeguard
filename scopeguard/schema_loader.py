@@ -1,5 +1,5 @@
 """
-nex.schema_loader
+scopeguard.schema_loader
 ~~~~~~~~~~~~~~~~~~~~~~~~
 Reads YAML schema files at startup and exposes schema metadata.
 Schema is data, not code — the application interprets the schema; it does not embody it.

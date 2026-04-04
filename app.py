@@ -1,12 +1,12 @@
 """
 app.py
 ~~~~~~
-Entry point for Nex.
+Entry point for ScopeGuard.
 
   python app.py
 
 Opens on http://127.0.0.1:5000
-All data is stored locally in ./data/nex.db
+All data is stored locally in ./data/scopeguard.db
 No network connections are made.
 """
 
@@ -19,11 +19,11 @@ from app import create_app
 
 if __name__ == "__main__":
     application = create_app()
-    debug = os.environ.get("NEX_DEBUG", "false").lower() in ("1", "true", "yes")
+    debug = os.environ.get("SCOPEGUARD_DEBUG", "false").lower() in ("1", "true", "yes")
     print("\n" + "─" * 52)
-    print("  Nex")
+    print("  ScopeGuard")
     print("  http://127.0.0.1:5000")
     print("  Local only · No network calls")
-    print("  Data: ./data/nex.db")
+    print("  Data: ./data/scopeguard.db")
     print("─" * 52 + "\n")
     application.run(debug=debug, port=5000, host="127.0.0.1")

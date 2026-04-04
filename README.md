@@ -1,4 +1,4 @@
-# Nex v2.0
+# ScopeGuard v2.0
 
 <p align="center">
   <strong>Penetration Test Scope &amp; Rules of Engagement Builder</strong><br/>
@@ -25,23 +25,23 @@ A local-only Flask application that guides penetration testing teams through bui
 > **NEX is a proprietary third-party security platform currently under heavy development.**
 > It will not be released until its Arch-based `.iso` has been fully assembled, tested, and confirmed stable and bug-free.
 
-Nex is designed to serve as the **scope and authorisation layer** for NEX — and that binding is a hard architectural constraint, not an optional integration.  A NEX session cannot start without a valid Nex policy bundle.  There is no bypass.
+ScopeGuard is designed to serve as the **scope and authorisation layer** for NEX — and that binding is a hard architectural constraint, not an optional integration.  A NEX session cannot start without a valid ScopeGuard policy bundle.  There is no bypass.
 
 ### What is NEX?
 
 NEX is a modular Python security platform built from the ground up on the stdlib — no pip, no npm, nothing external.  It covers the full engagement lifecycle: active reconnaissance, vulnerability discovery, exploitation-impact analysis, live threat detection across endpoint, network, identity, cloud, and deception layers, and a complete digital forensics suite with chain-of-custody controls.  Everything routes through a single authorisation hub, every byte of sensitive memory is physically zeroed after use, and every run produces three forensically defensible reports — an executive summary, a full technical report, and a chain-of-custody forensic report with evidence export.
 
-### How Nex binds to NEX
+### How ScopeGuard binds to NEX
 
 The binding happens in a strict four-step sequence every time an engagement is finalised:
 
 ```
-Nex                                  NEX
+ScopeGuard                                  NEX
 ──────────────────────────────────────────────────────────────────────
 1.  Validate engagement (0 BLOCK findings)
 2.  Generate SOW.docx + ROE.docx
 3.  SHA-256 hash both documents
-4.  Compile policy bundle ─────────────────▶ /etc/nex-policy.json
+4.  Compile policy bundle ─────────────────▶ /etc/scopeguard-policy.json
                                                ↑
                                     BootPolicy.initialise() reads this
                                     before any module is allowed to run
@@ -63,13 +63,13 @@ Nex                                  NEX
 
 **What this means in practice:**
 
-- The in-scope CIDRs you enter in Nex become the *only* targets NEX will touch.  Any technique aimed at an address outside those ranges is blocked at the gate.
-- The technique authorization matrix you fill in Nex maps directly to `TechniqueClass` values in NEX's `PolicyDecisionEngine`.  A technique not authorized in Nex is a technique NEX will not run.
-- The engagement window you set in Nex is enforced by NEX at runtime — no testing before start, no testing after end.
+- The in-scope CIDRs you enter in ScopeGuard become the *only* targets NEX will touch.  Any technique aimed at an address outside those ranges is blocked at the gate.
+- The technique authorization matrix you fill in ScopeGuard maps directly to `TechniqueClass` values in NEX's `PolicyDecisionEngine`.  A technique not authorized in ScopeGuard is a technique NEX will not run.
+- The engagement window you set in ScopeGuard is enforced by NEX at runtime — no testing before start, no testing after end.
 - The SHA-256 hash of the signed SOW `.docx` is embedded in the policy bundle and carried through into every `RecoveryRecord`, creating a cryptographic chain of custody from the signed legal document to every action NEX takes.
-- Nex also writes a second, richer artifact set to `/var/lib/nex/artifacts/<scope_id>/` — a canonical `scope.json`, an HMAC-signed `scope_token.json`, a full `audit.json`, and an append-only `version_index.json`.  These files are written atomically and are never mutated after creation.
+- ScopeGuard also writes a second, richer artifact set to `/var/lib/nex/artifacts/<scope_id>/` — a canonical `scope.json`, an HMAC-signed `scope_token.json`, a full `audit.json`, and an append-only `version_index.json`.  These files are written atomically and are never mutated after creation.
 
-> 🚧 Screenshots of Nex and NEX running together will be added here once the platform reaches public release.
+> 🚧 Screenshots of ScopeGuard and NEX running together will be added here once the platform reaches public release.
 
 </details>
 
@@ -79,13 +79,13 @@ Nex                                  NEX
 <summary><strong>Quick Start</strong></summary>
 
 ```bash
-git clone https://github.com/0x4E4558/nex.git
-cd nex
+git clone https://github.com/0x4E4558/scopeguard.git
+cd scopeguard
 bash setup.sh     # creates .venv, installs dependencies
 bash run.sh       # starts at http://127.0.0.1:5000
 ```
 
-**Requirements:** Python 3.10+ · No internet connection required · Data stored locally in `./data/nex.db`
+**Requirements:** Python 3.10+ · No internet connection required · Data stored locally in `./data/scopeguard.db`
 
 </details>
 
@@ -94,7 +94,7 @@ bash run.sh       # starts at http://127.0.0.1:5000
 <details>
 <summary><strong>Screenshots</strong></summary>
 
-> 📸 **These screenshots will be replaced** with updated captures showing Nex and NEX running together once testing is complete.
+> 📸 **These screenshots will be replaced** with updated captures showing ScopeGuard and NEX running together once testing is complete.
 
 **Main engagements screen**
 
@@ -137,7 +137,7 @@ Two `.docx` documents per engagement, with classification headers and page-numbe
 <details>
 <summary><strong>Sample Document Output</strong></summary>
 
-The two `.docx` files in this repository (`03172026-SIS-001-Scope-of-Work.docx` and `03172026-SIS-001-Rules-of-Engagement.docx`) are real output from Nex. Below is a cutaway of each.
+The two `.docx` files in this repository (`03172026-SIS-001-Scope-of-Work.docx` and `03172026-SIS-001-Rules-of-Engagement.docx`) are real output from ScopeGuard. Below is a cutaway of each.
 
 ### Scope of Work (SOW) — document structure
 
@@ -449,7 +449,7 @@ Coverage: All 20 field-level rules (VAL-001–VAL-020) · All 16 cross-reference
 │   ├── maintenance_windows.yaml
 │   ├── data_governance.yaml
 │   └── social_engineering.yaml
-├── nex/              # Validation engine (no Flask dependency)
+├── scopeguard/              # Validation engine (no Flask dependency)
 │   ├── models.py            # Engagement dataclasses
 │   ├── validator.py         # All VAL + XRF rules
 │   ├── finding.py           # Finding, FindingList, Severity
@@ -474,7 +474,7 @@ Coverage: All 20 field-level rules (VAL-001–VAL-020) · All 16 cross-reference
 <details>
 <summary><strong>Data &amp; Privacy</strong></summary>
 
-All data is stored locally in `./data/nex.db` (SQLite). No network connections are made at runtime. No data leaves your machine. All fonts (DM Sans and JetBrains Mono) are served from `app/static/fonts/` — no external requests are made.
+All data is stored locally in `./data/scopeguard.db` (SQLite). No network connections are made at runtime. No data leaves your machine. All fonts (DM Sans and JetBrains Mono) are served from `app/static/fonts/` — no external requests are made.
 
 </details>
 

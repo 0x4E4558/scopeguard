@@ -1,5 +1,5 @@
 """
-nex.canonicalize
+scopeguard.canonicalize
 ~~~~~~~~~~~~~~~~~~~~~~~
 Deterministic, canonical JSON serialization.
 

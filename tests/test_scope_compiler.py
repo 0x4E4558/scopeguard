@@ -24,15 +24,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
 from tests.conftest import load_fixture
-from nex.canonicalize import canonical_json, canonical_json_bytes
-from nex.scope_compiler import (
+from scopeguard.canonicalize import canonical_json, canonical_json_bytes
+from scopeguard.scope_compiler import (
     ScopeArtifact,
     ScopeCompilationError,
     compile_scope,
     COMPILER_VERSION,
     SCOPE_SCHEMA_VERSION,
 )
-from nex.scope_token import verify_scope_token
+from scopeguard.scope_token import verify_scope_token
 
 # Fixed test key and timestamp for determinism assertions
 _TEST_KEY = b"test-hmac-key-fixed-for-determinism"

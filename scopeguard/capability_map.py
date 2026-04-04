@@ -1,5 +1,5 @@
 """
-nex.capability_map
+scopeguard.capability_map
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 Version-locked capability taxonomy and Nex module identifier mapping.
 

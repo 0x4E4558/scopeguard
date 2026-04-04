@@ -1,7 +1,7 @@
 """
 app.storage
 ~~~~~~~~~~~
-SQLite persistence layer for Nex engagements.
+SQLite persistence layer for ScopeGuard engagements.
 
 Schema:
   engagements(id, engagement_id, created_at, updated_at, status, data_json)
@@ -23,7 +23,7 @@ from datetime import datetime, date, timezone
 from pathlib import Path
 from typing import Optional
 
-DB_PATH = Path(__file__).parent.parent / "data" / "nex.db"
+DB_PATH = Path(__file__).parent.parent / "data" / "scopeguard.db"
 
 
 def _json_serial(obj):

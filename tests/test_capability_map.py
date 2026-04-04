@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from nex.capability_map import (
+from scopeguard.capability_map import (
     Capability,
     CATEGORY_TO_CAPABILITIES,
     CAPABILITY_TO_NEX_MODULES,
@@ -19,7 +19,7 @@ from nex.capability_map import (
     capabilities_to_modules,
     category_capability_matrix,
 )
-from nex.models import TechniqueCategory
+from scopeguard.models import TechniqueCategory
 
 
 # ─── Taxonomy integrity ────────────────────────────────────────────────────────
