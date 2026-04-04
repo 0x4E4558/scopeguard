@@ -399,7 +399,7 @@ def generate_draft_document(eng_id, doc_type):
 
     from app.hydrator import hydrate
     from app.generator import generate_sow, generate_roe
-    import io as _io
+    import io
 
     try:
         engagement = hydrate(record["data"])
@@ -426,7 +426,7 @@ def generate_draft_document(eng_id, doc_type):
                                    "Check the server log for details."}), 500
 
     return send_file(
-        _io.BytesIO(docx_bytes),
+        io.BytesIO(docx_bytes),
         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         as_attachment=True,
         download_name=filename,

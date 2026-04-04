@@ -472,6 +472,8 @@ def generate_sow(eng: Engagement, scope_binding: dict | None = None,
 
     doc.add_paragraph()
 
+    sow_doc_status = ("DRAFT — PENDING SIGNATURE" if draft
+                      else id_.document_status.value.upper().replace("_", " "))
     _cover_table(doc, [
         ("Client Organization",  id_.client_org_legal_name),
         ("Engagement ID",        id_.engagement_id),
@@ -480,8 +482,7 @@ def generate_sow(eng: Engagement, scope_binding: dict | None = None,
         ("Document Version",     id_.document_version),
         ("Prepared By",          id_.prepared_by),
         ("Prepared Date",        _fmt_date(id_.prepared_date)),
-        ("Document Status",      "DRAFT — PENDING SIGNATURE" if draft
-                                  else id_.document_status.value.upper().replace("_", " ")),
+        ("Document Status",      sow_doc_status),
     ] + ([
         ("Scope ID",             scope_binding["scope_id"]),
         ("Scope Hash (SHA-256)", scope_binding["scope_hash"]),
