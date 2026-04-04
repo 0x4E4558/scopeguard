@@ -251,6 +251,18 @@ class Validator:
         for contact in self.e.contacts:
             path = f"contacts[{contact.role}:{contact.full_name}]"
 
+            # VAL-022: full_name must not be an IP address or CIDR
+            if _valid_ip_or_cidr((contact.full_name or "").strip()):
+                self._add(
+                    "VAL-022", Severity.BLOCK,
+                    f"Contact full_name '{contact.full_name}' (role: {contact.role}) "
+                    f"appears to be an IP address or CIDR, not a person's name.",
+                    "Enter the person's full legal name in the full_name field. "
+                    "Tester source IP addresses must be entered in the "
+                    "authorized_source_ips field on the engagement_lead or team_member contact record.",
+                    field_path=f"{path}.full_name",
+                )
+
             # VAL-007: tester source IP validity
             for ip in contact.authorized_source_ips:
                 if not _valid_ip_or_cidr(ip):
