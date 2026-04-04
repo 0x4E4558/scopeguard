@@ -1590,6 +1590,7 @@
     if (field.conditional_on) {
       wrap.dataset.conditionalField     = field.conditional_on.field;
       wrap.dataset.conditionalValue     = field.conditional_on.value || '';
+      wrap.dataset.conditionalValues    = field.conditional_on.values ? JSON.stringify(field.conditional_on.values) : '';
       wrap.dataset.conditionalCondition = field.conditional_on.condition || '';
     }
 
