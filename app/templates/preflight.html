@@ -4,6 +4,7 @@
 {% block body %}
 {% set counts = findings.count() %}
 {% set eng_id_display = record.data.get('identity', {}).get('engagement_id') or record.id[:12] + '…' %}
+{% set doc_status = record.data.get('identity', {}).get('document_status', 'draft') %}
 
 <div class="app-shell">
 
@@ -176,6 +177,7 @@
           Print Draft ROE
         </a>
 
+        {% if doc_status != 'draft' %}
         {% if findings.blocks_generation() %}
         <span class="preflight-block-msg">
           {% set b = findings.count().BLOCK %}{% set m = findings.count().MISSING %}
@@ -203,12 +205,13 @@
           Download Rules of Engagement
         </a>
         {% endif %}
+        {% endif %}
       </div>
 
       <div class="preflight-info-box">
         <strong>Print Draft</strong> generates a watermarked draft for client review and approval.
         No execution token is embedded. Upon client approval, signatures are collected to enable execution.
-        {% if not findings.blocks_generation() %}
+        {% if doc_status != 'draft' and not findings.blocks_generation() %}
         <br>
         <strong>Download</strong> generates the fully executed document (requires all signatures).
         {% if findings.count().CLARIFY > 0 %}
