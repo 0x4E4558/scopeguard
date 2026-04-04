@@ -21,6 +21,7 @@ const SG = (() => {
     _initConditionals();
     _initTagsInputs();
     _initMultiselects();
+    _initMultiselectOther();
     _initFindingsPanel();
 
     // Autosave on any input change — use document-level delegation so
@@ -44,6 +45,8 @@ const SG = (() => {
     if (!el.matches('input, select, textarea')) return;
     // Skip the bare tags-input text field (save triggered on tag add/remove)
     if (el.classList.contains('tags-input')) return;
+    // Skip the multiselect Other input (save triggered on Enter / item creation)
+    if (el.classList.contains('multiselect-other-input')) return;
     scheduleAutosave();
   }
 
@@ -293,12 +296,67 @@ const SG = (() => {
     document.querySelectorAll('.multiselect-item').forEach(item => {
       if (!item._sgWired) {
         item._sgWired = true;
-        item.addEventListener('click', () => {
-          item.classList.toggle('selected');
-          scheduleAutosave();
-        });
+        // Custom items are removed via their × button, not toggled by click
+        if (item.classList.contains('multiselect-custom')) {
+          const rm = item.querySelector('.multiselect-remove');
+          if (rm && !rm._sgWired) {
+            rm._sgWired = true;
+            rm.addEventListener('click', e => {
+              e.stopPropagation();
+              item.remove();
+              scheduleAutosave();
+            });
+          }
+        } else {
+          item.addEventListener('click', () => {
+            item.classList.toggle('selected');
+            scheduleAutosave();
+          });
+        }
       }
     });
+  }
+
+  // ── Multiselect "Other" free-text input ─────────────────────────────────────
+
+  function _setupMultiselectOther(input) {
+    if (input._sgWired) return;
+    input._sgWired = true;
+    input.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const val = input.value.trim();
+      if (!val) return;
+      // Find the associated multiselect group via data-for-group
+      const groupName = input.dataset.forGroup;
+      const scope = input.closest('.field-group') || input.closest('.list-item-body') || document;
+      const group = scope.querySelector(`.multiselect-group[data-field-name="${groupName}"]`);
+      if (!group) return;
+      // Avoid duplicate entries
+      const already = Array.from(group.querySelectorAll('.multiselect-item'))
+        .some(el => el.dataset.value.toLowerCase() === val.toLowerCase());
+      if (already) { input.value = ''; return; }
+      // Build the custom item
+      const item = document.createElement('div');
+      item.className = 'multiselect-item selected multiselect-custom';
+      item.dataset.value = val;
+      item.textContent = val;
+      const rm = document.createElement('span');
+      rm.className = 'multiselect-remove';
+      rm.title = 'Remove';
+      rm.textContent = '×';
+      rm._sgWired = true;
+      rm.addEventListener('click', ev => { ev.stopPropagation(); item.remove(); scheduleAutosave(); });
+      item.appendChild(rm);
+      item._sgWired = true; // handled above; no click-toggle for custom items
+      group.appendChild(item);
+      input.value = '';
+      scheduleAutosave();
+    });
+  }
+
+  function _initMultiselectOther() {
+    document.querySelectorAll('.multiselect-other-input').forEach(_setupMultiselectOther);
   }
 
   // ── Findings panel ──────────────────────────────────────────────────────────
@@ -387,13 +445,23 @@ const SG = (() => {
   function wireNewItem(item) {
     // Wire tag containers
     item.querySelectorAll('[data-tag-field]').forEach(_setupTagsContainer);
-    // Wire multiselects
+    // Wire multiselects (standard items toggle; custom items use remove button)
     item.querySelectorAll('.multiselect-item').forEach(el => {
       if (!el._sgWired) {
         el._sgWired = true;
-        el.addEventListener('click', () => { el.classList.toggle('selected'); scheduleAutosave(); });
+        if (el.classList.contains('multiselect-custom')) {
+          const rm = el.querySelector('.multiselect-remove');
+          if (rm && !rm._sgWired) {
+            rm._sgWired = true;
+            rm.addEventListener('click', e => { e.stopPropagation(); el.remove(); scheduleAutosave(); });
+          }
+        } else {
+          el.addEventListener('click', () => { el.classList.toggle('selected'); scheduleAutosave(); });
+        }
       }
     });
+    // Wire multiselect Other inputs
+    item.querySelectorAll('.multiselect-other-input').forEach(_setupMultiselectOther);
     // Re-evaluate conditionals
     _evalAllConditionals();
     // Do NOT autosave here — save only fires when the user actually fills in a field.

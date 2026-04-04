@@ -160,9 +160,16 @@
           ← Back to Form
         </a>
 
-        {% if findings.has_blockers() %}
+        {% if findings.blocks_generation() %}
         <span class="preflight-block-msg">
-          Resolve {{ findings.blockers()|length }} BLOCK finding{{ 's' if findings.blockers()|length != 1 }} before generating documents.
+          {% set b = findings.count().BLOCK %}{% set m = findings.count().MISSING %}
+          {% if b > 0 and m > 0 %}
+            Resolve {{ b }} BLOCK and {{ m }} MISSING finding{{ 's' if (b + m) != 1 }} before generating documents.
+          {% elif b > 0 %}
+            Resolve {{ b }} BLOCK finding{{ 's' if b != 1 }} before generating documents.
+          {% else %}
+            Complete {{ m }} MISSING field{{ 's' if m != 1 }} before generating documents.
+          {% endif %}
         </span>
         {% else %}
         <a href="/engagement/{{ eng_id }}/generate/sow" class="btn btn-primary btn-icon">
@@ -182,14 +189,13 @@
         {% endif %}
       </div>
 
-      {% if not findings.has_blockers() %}
+      {% if not findings.blocks_generation() %}
       <div class="preflight-info-box">
         Documents are generated from your validated engagement data.
         Both files are fully formatted Word documents (.docx) ready for review and signature.
-        {% if findings.count().CLARIFY > 0 or findings.count().MISSING > 0 %}
+        {% if findings.count().CLARIFY > 0 %}
         <strong class="preflight-warn-clarify">
-          {{ findings.count().CLARIFY + findings.count().MISSING }} CLARIFY/MISSING finding(s)
-          remain — review before sending for signature.
+          {{ findings.count().CLARIFY }} CLARIFY finding(s) remain — review before sending for signature.
         </strong>
         {% endif %}
       </div>
@@ -206,7 +212,7 @@
         <span class="finding-badge badge-CLARIFY">CLARIFY</span>
         <span>Requires explicit written client response before document execution.</span>
         <span class="finding-badge badge-MISSING">MISSING</span>
-        <span>Required field or record is absent. Complete the section.</span>
+        <span>Required field or record is absent. Document generation blocked until resolved.</span>
         <span class="finding-badge badge-NOTE">NOTE</span>
         <span>Implicit assumption that should be made explicit. Does not block generation.</span>
       </div>

@@ -124,14 +124,14 @@ class TestXRF002:
 class TestXRF003:
     def test_mcb_carve_outs_detected(self, mcb_engagement):
         """
-        MCB has Executive VLAN (10.10.4.0/24) out-of-scope while Core Banking
-        (10.10.0.0/22) is in-scope. 10.10.4.0/24 IS a subnet of 10.10.0.0/22.
-        This should trigger XRF-003.
+        MCB has Executive VLAN (10.10.2.0/24) out-of-scope while Core Banking
+        (10.10.0.0/22) is in-scope. 10.10.2.0/24 IS a subnet of 10.10.0.0/22
+        (which covers 10.10.0.0–10.10.3.255). This should trigger XRF-003.
         """
         eng = copy.deepcopy(mcb_engagement)
         eng.out_of_scope_assets.append(OutOfScopeAsset(
             asset_name="Executive VLAN",
-            cidr_notation="10.10.4.0/24",
+            cidr_notation="10.10.2.0/24",
             subnet_mask="255.255.255.0",
             description="Executive VLAN carved out of Core Banking range",
             delivery_method=DeliveryMethod.NETWORK_DISCOVERABLE,

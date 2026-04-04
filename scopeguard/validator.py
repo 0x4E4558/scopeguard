@@ -251,6 +251,18 @@ class Validator:
         for contact in self.e.contacts:
             path = f"contacts[{contact.role}:{contact.full_name}]"
 
+            # VAL-022: full_name must not be an IP address or CIDR
+            if _valid_ip_or_cidr((contact.full_name or "").strip()):
+                self._add(
+                    "VAL-022", Severity.BLOCK,
+                    f"Contact full_name '{contact.full_name}' (role: {contact.role}) "
+                    f"appears to be an IP address or CIDR, not a person's name.",
+                    "Enter the person's full legal name in the full_name field. "
+                    "Tester source IP addresses must be entered in the "
+                    "authorized_source_ips field on the engagement_lead or team_member contact record.",
+                    field_path=f"{path}.full_name",
+                )
+
             # VAL-007: tester source IP validity
             for ip in contact.authorized_source_ips:
                 if not _valid_ip_or_cidr(ip):
@@ -787,17 +799,22 @@ class Validator:
         if "PCI-DSS" in [r.value for r in reg]:
             has_any_assets = self.e.in_scope_assets or self.e.out_of_scope_assets
             if has_any_assets:
-                in_scope_names  = {a.asset_name.lower() for a in self.e.in_scope_assets}
-                out_scope_names = {a.asset_name.lower() for a in self.e.out_of_scope_assets}
                 cde_keywords = {"card", "cardholder", "pci", "cde", "payment", "processing"}
-                in_has_cde  = any(kw in name for name in in_scope_names  for kw in cde_keywords)
-                out_has_cde = any(kw in name for name in out_scope_names for kw in cde_keywords)
-                if not in_has_cde and not out_has_cde:
+
+                def _has_cde(assets):
+                    for a in assets:
+                        text = ((a.asset_name or "") + " " +
+                                (getattr(a, "description", "") or "")).lower()
+                        if any(kw in text for kw in cde_keywords):
+                            return True
+                    return False
+
+                if not _has_cde(self.e.in_scope_assets) and not _has_cde(self.e.out_of_scope_assets):
                     self._add(
                         "XRF-016", Severity.NOTE,
                         "PCI-DSS is listed in regulatory_basis but no cardholder data "
                         "environment (CDE) assets are identified or explicitly excluded.",
-                        "Explicitly address whether CDE assets are in or out of scope and "
-                        "document the reason.",
+                        "Add CDE assets to the in-scope or out-of-scope asset list, or note "
+                        "'CDE' / 'PCI' in an asset name or description to confirm scope is addressed.",
                         field_path=identity_path,
                     )

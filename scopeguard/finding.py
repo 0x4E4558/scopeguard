@@ -58,6 +58,18 @@ class FindingList:
     def blockers(self) -> list[Finding]:
         return [f for f in self._findings if f.severity == Severity.BLOCK]
 
+    def missing(self) -> list[Finding]:
+        return [f for f in self._findings if f.severity == Severity.MISSING]
+
+    def blocks_generation(self) -> bool:
+        """Return True when BLOCK or MISSING findings exist.
+
+        MISSING findings mean required data is absent — documents generated
+        without that data would be incomplete and must not be issued.
+        """
+        return any(f.severity in (Severity.BLOCK, Severity.MISSING)
+                   for f in self._findings)
+
     def by_severity(self, severity: Severity) -> list[Finding]:
         return [f for f in self._findings if f.severity == severity]
 
